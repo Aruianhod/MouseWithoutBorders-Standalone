@@ -6,6 +6,7 @@
     <ApplicationManifest>MouseWithoutBorders.exe.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
     <Compile Remove="Resources\**;Service\**;Helper\**;Control\Machine2.Designer.cs;Control\MachineMatrix.Designer.cs;Form\frmLogon.cs;Form\frmLogon.Designer.cs;Form\Settings\SettingsPage.Designer.cs;Form\Settings\SettingsPage1.Designer.cs;Form\Settings\SettingsPage2.Designer.cs;Form\Settings\SettingsPage3.Designer.cs;Form\Settings\SettingsPage4.Designer.cs;Telemetry\**;Core\ShutdownWithPowerToys.cs;Core\CommandEventHandler.cs" />
     <EmbeddedResource Remove="Resources\**;Service\**;Helper\**;Control\Machine2.resx;Control\MachineMatrix.resx;Form\frmLogon.resx;Form\Settings\SettingsPage.resx;Form\Settings\SettingsPage1.resx;Form\Settings\SettingsPage2.resx;Form\Settings\SettingsPage3.resx;Form\Settings\SettingsPage4.resx" />
     <Compile Include="..\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />

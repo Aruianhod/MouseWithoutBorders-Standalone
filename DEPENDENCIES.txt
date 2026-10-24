@@ -1,5 +1,7 @@
 MessagePack.Annotations/3.1.12
 MessagePack/3.1.12
+NAudio.Wasapi/2.2.1
+NAudio.Core/2.2.1
 MessagePackAnalyzer/3.1.12
 Microsoft.Bcl.AsyncInterfaces/8.0.0
 Microsoft.NET.StringTools/17.11.4

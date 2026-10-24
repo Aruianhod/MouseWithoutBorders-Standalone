@@ -7,6 +7,6 @@ try {
         & $DotNet publish $project -c Release --self-contained true -p:RestoreLockedMode=true -o $Destination --nologo
         if ($LASTEXITCODE -ne 0) { throw "Publish failed: $project" }
     }
-    Copy-Item LICENSE,UPSTREAM-NOTICE.md,README-zh-CN.txt,CHANGES.md,THIRD-PARTY-NOTICES.txt $Destination
+    Copy-Item LICENSE,UPSTREAM-NOTICE.md,CHANGES.md,PROVENANCE.json,*.txt $Destination
     Copy-Item THIRD-PARTY-LICENSES $Destination -Recurse -Force
 } finally { Pop-Location }

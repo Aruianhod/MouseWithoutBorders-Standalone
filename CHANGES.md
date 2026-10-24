@@ -1,4 +1,4 @@
-# Standalone 0.102.2933.4
+# Standalone 0.102.2933.5 — experimental audio extension
 
 Based on Microsoft PowerToys release `v0.102.2933.0`, commit
 `9673c84ffac3bcc55e75fbecaedcda9e7d698530` (MIT licensed).
@@ -54,3 +54,24 @@ Regression coverage includes first-run key reuse, both connection directions,
 layout preservation, clipboard preferences, and Unicode text/PNG bytes across the
 real helper IPC transport, including cancellation and reconnection. No physical
 two-computer clipboard or automatic reconnect test was performed for this build.
+
+Audio preview (0.102.2933.5): add independent opt-in system-loopback and microphone
+send/receive routes, endpoint selection, remembered peers, per-route volume, bounded
+buffering, configurable audio port, status and a stop-all action. Add Chinese settings
+from the tray and main settings window. NAudio.Wasapi/Core 2.2.1 provide shared-mode
+48 kHz float capture and playback. Transport uses separate TLS TCP connections and
+mutual pairing-secret proofs bound to the server certificate, fresh nonces and stream
+metadata. Require a current authenticated mouse connection and the configured peer;
+start capture only after the receiver authenticates and prepares its output device.
+Disconnect/key changes stop the channel; device/network failures retry. Receivers
+are capped at one stream of each kind, with bounded handshakes and frame sizes.
+Prevent receiving into the same endpoint being captured for system-audio sharing.
+
+Microphone injection into arbitrary remote applications requires a separately
+installed virtual audio endpoint; select its render endpoint here and its capture
+endpoint in the remote application. No driver, trust-store certificate, firewall
+rule or default audio device is installed/changed by this build. Windows Schannel
+requires a temporary user-scoped certificate key container (not EphemeralKeySet).
+No user audio was recorded during verification; synthetic PCM tests use real local
+TCP/TLS. Physical audio capture/playback, driver routing, latency, and two-computer
+operation remain unverified. This is an experimental feature, not production audio QA.

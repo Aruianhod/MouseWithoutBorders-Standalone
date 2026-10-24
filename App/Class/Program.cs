@@ -256,8 +256,9 @@ namespace MouseWithoutBorders.Class
                 Core.Helper.WndProcCounter++;
 
                 var formScreen = new FrmScreen();
-
-                Application.Run(formScreen);
+                Audio.AudioService.Instance.Start();
+                try { Application.Run(formScreen); }
+                finally { Audio.AudioService.Instance.Stop(); }
 
                 
             }

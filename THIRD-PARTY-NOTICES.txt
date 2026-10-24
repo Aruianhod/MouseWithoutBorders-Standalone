@@ -1,6 +1,9 @@
 Third-party dependencies for Mouse Without Borders Standalone.
 PowerToys source: MIT, see LICENSE and UPSTREAM-NOTICE.md.
 Build-time-only analyzers may appear in this list.
+NAudio.Wasapi/2.2.1 | License: MIT | https://www.nuget.org/packages/NAudio.Wasapi/2.2.1
+NAudio.Core/2.2.1 | License: MIT | https://www.nuget.org/packages/NAudio.Core/2.2.1
+NAudio license included in THIRD-PARTY-LICENSES/NAudio-2.2.1.txt. Copyright Mark Heath.
 Self-contained Microsoft .NET 10 Windows runtime: MIT; see bundled runtime notices.
 
 MessagePack.Annotations/3.1.12 | License: MIT | https://www.nuget.org/packages/MessagePack.Annotations/3.1.12

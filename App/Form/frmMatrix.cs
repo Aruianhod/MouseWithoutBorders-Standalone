@@ -50,6 +50,12 @@ namespace MouseWithoutBorders
         internal FrmMatrix()
         {
             InitializeComponent();
+            var audioPage = new TabPage("声音与麦克风");
+            var audioButton = new Button { Text = "配置声音与麦克风共享…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
+            audioButton.Click += (_, _) => { using var audioSettings = new Audio.AudioSettingsForm(); audioSettings.ShowDialog(this); };
+            audioPage.Controls.Add(audioButton);
+            audioPage.Controls.Add(new Label { Text = "独立配置系统声音、麦克风的发送与接收。\r\n复用现有配对关系；首次使用默认关闭。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
+            tabControlSetting.TabPages.Add(audioPage);
 
             textBoxEnc.Font = new System.Drawing.Font(Control.DefaultFont.Name, 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
 

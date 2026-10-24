@@ -222,6 +222,19 @@
           "MSTest.Analyzers": "3.8.3"
         }
       },
+      "NAudio.Core": {
+        "type": "Transitive",
+        "resolved": "2.2.1",
+        "contentHash": "GgkdP6K/7FqXFo7uHvoqGZTJvW4z8g2IffhOO4JHaLzKCdDOUEzVKtveoZkCuUX8eV2HAINqi7VFqlFndrnz/g=="
+      },
+      "NAudio.Wasapi": {
+        "type": "Transitive",
+        "resolved": "2.2.1",
+        "contentHash": "lFfXoqacZZe0WqNChJgGYI+XV/n/61LzPHT3C1CJp4khoxeo2sziyX5wzNYWeCMNbsWxFvT3b3iXeY1UYjBhZw==",
+        "dependencies": {
+          "NAudio.Core": "2.2.1"
+        }
+      },
       "Nerdbank.Streams": {
         "type": "Transitive",
         "resolved": "2.11.90",
@@ -257,6 +270,7 @@
         "type": "Project",
         "dependencies": {
           "MessagePack": "[3.1.12, )",
+          "NAudio.Wasapi": "[2.2.1, )",
           "Newtonsoft.Json": "[13.0.4, )",
           "StreamJsonRpc": "[2.21.69, )",
           "System.IO.Abstractions": "[22.0.13, )",

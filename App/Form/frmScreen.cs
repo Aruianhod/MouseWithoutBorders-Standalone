@@ -73,6 +73,11 @@ namespace MouseWithoutBorders
         internal FrmScreen()
         {
             InitializeComponent();
+            MainMenu.Items.Insert(0, new ToolStripMenuItem("声音与麦克风共享…", null, (_, _) =>
+            {
+                using var audioSettings = new Audio.AudioSettingsForm();
+                audioSettings.ShowDialog();
+            }));
             Text = Setting.Values.MyID;
             NotifyIcon.BalloonTipText = Application.ProductName;
             NotifyIcon.BalloonTipTitle = Application.ProductName;
@@ -129,6 +134,7 @@ namespace MouseWithoutBorders
 
         internal void Quit(bool cleanup, bool isFormClosing)
         {
+            Audio.AudioService.Instance.Stop();
             Tag = "Quitting...";
 
             Setting.Values.SwitchCount += Common.SwitchCount;
