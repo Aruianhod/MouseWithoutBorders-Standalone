@@ -1,4 +1,15 @@
-﻿# Standalone 0.102.2933.17 — jitter-tolerant low-latency audio and nonblocking input
+﻿# Standalone 0.102.2933.18 — smooth audio gaps in both latency modes
+
+- Preserve the last output sample per channel and apply a stateful 5 ms transition at empty/partial underruns, resume and receive queue trims. Progress survives small output reads; uninterrupted PCM remains unchanged after startup.
+- Detect sender queue sequence gaps and smooth the next frame instead of hard-splicing dropped audio. Never replay old audio to conceal a gap.
+- Add bounded startup/recovery priming to stable mode (initial 80 ms, adaptive up to the configured capacity or 200 ms). This can increase latency in exchange for jitter tolerance.
+- Use event-driven low-latency loopback capture with 60 ms capacity, and give microphone capture 60 ms capacity. Stable loopback keeps its existing polling behavior.
+- Expose receive underrun/trim diagnostics in both modes and sender queue discard counts. These are local buffer counters, not network packet-loss measurements.
+- Align build and provenance version metadata with .18.
+- Validation: the first eight new discontinuity cases failed before the fix. Full suite: 229 total, 228 passed, 0 failed, 1 existing skipped. Local silent WASAPI playback and live capture callback timing passed in both modes; no audio was saved or transmitted by the smoke test. Remote hardware and audible results still require two-computer listening.
+- Update both computers to cover both sending and receiving changes; save the selected mode before comparing.
+
+# Standalone 0.102.2933.17 — jitter-tolerant low-latency audio and nonblocking input
 
 - Prime low-latency audio before consuming it, adapt from 40 ms up to 100 ms for actual render block sizes and underruns, and request a 40 ms shared WASAPI render buffer.
 - Keep a bounded 160 ms receive queue and retain the adaptive cushion on catch-up; fade only rebuffer/trim boundaries. Report target, underruns and discarded duration as local diagnostics, not network packet-loss measurements.

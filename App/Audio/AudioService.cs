@@ -201,8 +201,9 @@ internal sealed class AudioService
         capture.DataAvailable += (_, args) => queue.Add(args.Buffer, args.BytesRecorded, route.Volume);
         capture.RecordingStopped += (_, args) => queue.Complete(args.Exception);
         capture.StartRecording();
-        SetStatus(Label(true, kind), "正在发送到 " + route.Peer + " · " + device.FriendlyName + (settings.LowLatency ? " · 低延迟" : " · 稳定缓冲"));
-        long nextCheck = 0;
+        string sendingStatus = "正在发送到 " + route.Peer + " · " + device.FriendlyName + (settings.LowLatency ? " · 低延迟" : " · 稳定缓冲");
+        SetStatus(Label(true, kind), sendingStatus);
+        long nextCheck = 0, nextDiagnostic = 0;
         try
         {
             while (!token.IsCancellationRequested)
@@ -223,6 +224,11 @@ internal sealed class AudioService
                 using var writeTimeout = CancellationTokenSource.CreateLinkedTokenSource(token);
                 writeTimeout.CancelAfter(3000);
                 await AudioWire.WritePacket(tls, frame, writeTimeout.Token).ConfigureAwait(false);
+                if (Environment.TickCount64 >= nextDiagnostic)
+                {
+                    SetStatus(Label(true, kind), sendingStatus + $" · 发送队列丢弃 {queue.DroppedFrames} 帧");
+                    nextDiagnostic = Environment.TickCount64 + 5000;
+                }
             }
         }
         finally { capture.StopRecording(); queue.Complete(); }
@@ -342,7 +348,7 @@ internal sealed class AudioService
                 byte[] frame = await AudioWire.ReadPacket(tls, AudioWire.MaxFrame, frameTimeout.Token).ConfigureAwait(false);
                 AudioWire.ScaleSamples(frame, channels, route.Volume);
                 if (frame.Length > 0) buffer.Add(frame);
-                if (settings.LowLatency && Environment.TickCount64 >= nextDiagnostic)
+                if (Environment.TickCount64 >= nextDiagnostic)
                 {
                     SetStatus(Label(false, hello.Kind), receivingStatus + $" · 预缓冲 {buffer.TargetMilliseconds}ms · 欠载 {buffer.Underruns} 次 · 追赶丢弃 {buffer.DroppedBytes * 1000 / buffer.WaveFormat.AverageBytesPerSecond}ms");
                     nextDiagnostic = Environment.TickCount64 + 5000;

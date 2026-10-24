@@ -17,13 +17,17 @@ public sealed class AudioLatencyTests
     }
 
     [TestMethod]
-    public void StableModeRetainsExistingPlaybackAndBufferBehavior()
+    public void StableModePrimesAudioAndRetainsItsPlaybackBuffer()
     {
         var buffer = AudioLatency.CreateBuffer(2, false, 160);
         var input = Pcm(2, 10, .4f); var output = new byte[input.Length];
         buffer.Add(input); buffer.Read(output, 0, output.Length);
+        Assert.IsTrue(output.All(b => b == 0));
+        buffer.Add(Pcm(2, 80, .4f));
+        buffer.Read(output, 0, output.Length); // Startup crossfade.
+        buffer.Read(output, 0, output.Length);
         CollectionAssert.AreEqual(input, output);
-        Assert.AreEqual(0, buffer.TargetMilliseconds);
+        Assert.AreEqual(80, buffer.TargetMilliseconds);
         Assert.AreEqual(100, AudioLatency.PlaybackMilliseconds(false, 160));
     }
 
@@ -135,7 +139,7 @@ public sealed class AudioLatencyTests
     [TestMethod]
     [DataRow(1)]
     [DataRow(2)]
-    public void SteadyAudioIsBitExactWithoutDropsOrAddedPrebuffer(int channels)
+    public void SteadyAudioIsBitExactAfterStartupEnvelopeWithoutDrops(int channels)
     {
         var buffer = new LiveAudioBuffer(channels, 60, 20);
         var frame = Pcm(channels, 10, .4f);
@@ -144,11 +148,13 @@ public sealed class AudioLatencyTests
         {
             buffer.Add(frame);
             Assert.AreEqual(read.Length, buffer.Read(read, 0, read.Length));
-            CollectionAssert.AreEqual(frame, read);
+            if (i > 0) CollectionAssert.AreEqual(frame, read);
         }
         Assert.AreEqual(0L, buffer.DroppedBytes);
         buffer.Read(read, 0, read.Length);
-        Assert.IsTrue(read.All(b => b == 0), "Underruns must play silence, not repeat old samples.");
+        Assert.IsTrue(read.Skip(48 * channels * 4 * 5).All(b => b == 0), "After a 5 ms decay, underruns must play silence.");
+        buffer.Read(read, 0, read.Length);
+        Assert.IsTrue(read.All(b => b == 0), "Old audio must never loop during a stall.");
     }
 
     [TestMethod]
@@ -162,7 +168,8 @@ public sealed class AudioLatencyTests
         Assert.AreEqual((long)48 * channels * 4 * 50, buffer.DroppedBytes);
         var latest = new byte[buffer.BufferedBytes];
         buffer.Read(latest, 0, latest.Length);
-        CollectionAssert.AreEqual(Pcm(channels, 10, .6f).Concat(Pcm(channels, 10, .7f)).ToArray(), latest);
+        CollectionAssert.AreEqual(Pcm(channels, 10, .6f).Concat(Pcm(channels, 10, .7f)).Skip(48 * channels * 4 * 5).ToArray(),
+            latest.Skip(48 * channels * 4 * 5).ToArray());
         buffer.Add(Pcm(channels, 200, .8f));
         Assert.AreEqual(48 * channels * 4 * 20, buffer.BufferedBytes);
     }
