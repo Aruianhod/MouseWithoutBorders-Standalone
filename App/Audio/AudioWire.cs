@@ -111,10 +111,11 @@ internal static class AudioWire
     internal static async Task WritePacket(Stream stream, byte[] bytes, CancellationToken token)
     {
         if (bytes.Length > MaxFrame) throw new InvalidDataException("音频数据帧过大。");
-        byte[] header = new byte[4];
-        BinaryPrimitives.WriteInt32LittleEndian(header, bytes.Length);
-        await stream.WriteAsync(header, token).ConfigureAwait(false);
-        if (bytes.Length > 0) await stream.WriteAsync(bytes, token).ConfigureAwait(false);
+        // Preserve wire compatibility while emitting one TLS record instead of a tiny header record.
+        byte[] packet = new byte[4 + bytes.Length];
+        BinaryPrimitives.WriteInt32LittleEndian(packet, bytes.Length);
+        bytes.CopyTo(packet, 4);
+        await stream.WriteAsync(packet, token).ConfigureAwait(false);
     }
 
     internal static async Task<byte[]> ReadPacket(Stream stream, int maximum, CancellationToken token)

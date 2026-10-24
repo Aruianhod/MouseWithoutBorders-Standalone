@@ -24,6 +24,7 @@ internal sealed class AudioOptions
     public AudioRoute ReceiveSystem { get; set; } = new();
     public AudioRoute ReceiveMicrophone { get; set; } = new();
     public int Port { get; set; } = 15102;
+    public bool LowLatency { get; set; } = true;
     public int BufferMilliseconds { get; set; } = 160;
     public bool Receives => ReceiveSystem.Enabled || ReceiveMicrophone.Enabled;
     public AudioRoute Send(AudioKind kind) => kind == AudioKind.System ? SendSystem : SendMicrophone;

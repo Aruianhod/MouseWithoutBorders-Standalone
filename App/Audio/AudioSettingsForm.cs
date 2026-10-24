@@ -15,6 +15,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
     private readonly RouteEditor receiveMicrophone;
     private readonly NumericUpDown port = new() { Minimum = 1024, Maximum = 65535, Width = 90 };
     private readonly NumericUpDown buffer = new() { Minimum = 60, Maximum = 500, Increment = 20, Width = 80 };
+    private readonly CheckBox lowLatency = new() { Text = "低延迟（局域网推荐；声音断续时可关闭）", AutoSize = true };
     private readonly TextBox state = new() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
     private readonly Button apply = new() { Text = "保存并应用", AutoSize = true };
     private readonly Button stop = new() { Text = "停止全部音频共享", AutoSize = true };
@@ -36,7 +37,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(12) };
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 126));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
         root.Controls.Add(new Label
@@ -54,13 +55,18 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         AddTab(tabs, "麦克风", sendMicrophone, receiveMicrophone,
             "供会议/游戏使用：接收输出选虚拟音频线的播放端（如 CABLE Input），应用的麦克风选其录音端（CABLE Output）。需要自行安装虚拟音频设备；选耳机则为监听。");
         root.Controls.Add(tabs, 0, 1);
-        var network = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
+        var network = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true };
         port.Value = settings.Port;
         buffer.Value = settings.BufferMilliseconds;
         network.Controls.Add(new Label { Text = "音频端口（两台相同）", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
         network.Controls.Add(port);
         network.Controls.Add(new Label { Text = "接收缓冲上限（毫秒）", AutoSize = true, Padding = new Padding(16, 6, 0, 0) });
         network.Controls.Add(buffer);
+        network.SetFlowBreak(buffer, true);
+        lowLatency.Checked = settings.LowLatency;
+        buffer.Enabled = !lowLatency.Checked;
+        lowLatency.CheckedChanged += (_, _) => buffer.Enabled = !lowLatency.Checked;
+        network.Controls.Add(lowLatency);
         root.Controls.Add(network, 0, 2);
         root.Controls.Add(state, 0, 3);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(0, 6, 0, 0) };
@@ -79,7 +85,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
             var updated = AudioService.Instance.Options;
             sendSystem.LoadRoute(updated.SendSystem); receiveSystem.LoadRoute(updated.ReceiveSystem);
             sendMicrophone.LoadRoute(updated.SendMicrophone); receiveMicrophone.LoadRoute(updated.ReceiveMicrophone);
-            port.Value = updated.Port; buffer.Value = updated.BufferMilliseconds;
+            port.Value = updated.Port; buffer.Value = updated.BufferMilliseconds; lowLatency.Checked = updated.LowLatency;
             RefreshDevices();
         };
         timer.Tick += (_, _) => { if (!applying) state.Text = AudioService.Instance.Status; };
@@ -97,7 +103,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
     {
         SendSystem = sendSystem.Read(), ReceiveSystem = receiveSystem.Read(),
         SendMicrophone = sendMicrophone.Read(), ReceiveMicrophone = receiveMicrophone.Read(),
-        Port = (int)port.Value, BufferMilliseconds = (int)buffer.Value,
+        Port = (int)port.Value, BufferMilliseconds = (int)buffer.Value, LowLatency = lowLatency.Checked,
     };
 
     private void RefreshDevices()

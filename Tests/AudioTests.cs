@@ -287,6 +287,12 @@ public sealed class AudioTests
                 var root = form.Controls.OfType<System.Windows.Forms.TableLayoutPanel>().Single();
                 var tabs = root.Controls.OfType<System.Windows.Forms.TabControl>().Single();
                 Assert.AreEqual(2, tabs.TabPages.Count);
+                var network = root.Controls.OfType<System.Windows.Forms.FlowLayoutPanel>()
+                    .Single(p => p.Controls.OfType<System.Windows.Forms.CheckBox>().Any());
+                var lowLatency = network.Controls.OfType<System.Windows.Forms.CheckBox>().Single();
+                lowLatency.Checked = false;
+                Assert.IsFalse(form.ReadOptions().LowLatency);
+                lowLatency.Checked = true;
                 Directory.CreateDirectory("test-results");
                 foreach (int index in new[] { 0, 1 })
                 {

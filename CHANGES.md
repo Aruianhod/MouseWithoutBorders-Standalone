@@ -1,3 +1,14 @@
+# Standalone 0.102.2933.15 — lower audio latency
+
+- Enable a configurable low-latency audio mode for existing and new settings; preserve explicit opt-out through quick setup.
+- Request 20 ms system loopback and playback buffers instead of the previous 100 ms defaults.
+- Packetize in 10 ms frames; bound the sender to four frames and discard samples aged over 60 ms after stalls.
+- Bound live receive backlog to 60 ms and retain the newest 20 ms on overflow; synchronize trim, append and playback reads.
+- Combine header and PCM into one TLS write with the unchanged authenticated wire protocol.
+- Keep a larger-buffer mode, existing endpoints, pairing, default-device restore and microphone routes.
+- Test PCM continuity, overload recovery, stale-frame expiration, cancellation, concurrency, compatibility and UI settings.
+- Requested buffer sizes are not measured end-to-end latency or a guarantee of speaker/headset synchronization.
+
 # Standalone 0.102.2933.14 — faster connection establishment and recovery
 
 - Accept incoming sockets immediately using an endpoint display label. Use the existing

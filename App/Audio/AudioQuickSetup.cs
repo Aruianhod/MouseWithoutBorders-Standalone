@@ -83,7 +83,7 @@ internal static class AudioQuickSetup
     {
         if (!Enum.IsDefined(playbackMode)) throw new ArgumentOutOfRangeException(nameof(playbackMode));
         if (string.IsNullOrWhiteSpace(peer) || string.IsNullOrWhiteSpace(render)) throw new ArgumentException("请选择另一台已配对电脑，并确认本机有可用的播放设备。");
-        var result = new AudioOptions { Port = previous.Port, BufferMilliseconds = previous.BufferMilliseconds };
+        var result = new AudioOptions { Port = previous.Port, BufferMilliseconds = previous.BufferMilliseconds, LowLatency = previous.LowLatency };
         if (role == QuickAudioRole.HeadsetComputer)
         {
             if (string.IsNullOrWhiteSpace(capture)) throw new ArgumentException("本机没有可用麦克风。");

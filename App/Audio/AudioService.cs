@@ -178,28 +178,13 @@ internal sealed class AudioService
                 AudioDevices.CheckFeedback(settings, output.ID);
             }
         }
-        using WasapiCapture capture = kind == AudioKind.System ? new WasapiLoopbackCapture(device) : new WasapiCapture(device, true, 20);
+        using WasapiCapture capture = AudioLatency.CreateCapture(device, kind, settings.LowLatency);
         capture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, channels);
-        var queue = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(10)
-        {
-            SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.DropOldest,
-        });
-        capture.DataAvailable += (_, args) =>
-        {
-            int frameSize = 960 * channels * 4;
-            for (int offset = 0; offset < args.BytesRecorded; offset += frameSize)
-            {
-                int size = Math.Min(frameSize, args.BytesRecorded - offset);
-                if (size % (channels * 4) != 0) continue;
-                var frame = new byte[size];
-                Buffer.BlockCopy(args.Buffer, offset, frame, 0, size);
-                AudioWire.ScaleSamples(frame, channels, route.Volume);
-                queue.Writer.TryWrite(frame);
-            }
-        };
-        capture.RecordingStopped += (_, args) => queue.Writer.TryComplete(args.Exception);
+        var queue = new AudioFrameQueue(channels, settings.LowLatency);
+        capture.DataAvailable += (_, args) => queue.Add(args.Buffer, args.BytesRecorded, route.Volume);
+        capture.RecordingStopped += (_, args) => queue.Complete(args.Exception);
         capture.StartRecording();
-        SetStatus(Label(true, kind), "正在发送到 " + route.Peer + " · " + device.FriendlyName);
+        SetStatus(Label(true, kind), "正在发送到 " + route.Peer + " · " + device.FriendlyName + (settings.LowLatency ? " · 低延迟" : " · 稳定缓冲"));
         long nextCheck = 0;
         try
         {
@@ -215,7 +200,7 @@ internal sealed class AudioService
                 using (var readTimeout = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
                     readTimeout.CancelAfter(1000);
-                    try { frame = await queue.Reader.ReadAsync(readTimeout.Token).ConfigureAwait(false); }
+                    try { frame = await queue.ReadAsync(readTimeout.Token).ConfigureAwait(false); }
                     catch (OperationCanceledException) when (!token.IsCancellationRequested) { frame = Array.Empty<byte>(); }
                 }
                 using var writeTimeout = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -223,7 +208,7 @@ internal sealed class AudioService
                 await AudioWire.WritePacket(tls, frame, writeTimeout.Token).ConfigureAwait(false);
             }
         }
-        finally { capture.StopRecording(); queue.Writer.TryComplete(); }
+        finally { capture.StopRecording(); queue.Complete(); }
     }
 
     private async Task ListenLoop(AudioOptions settings, CancellationToken token)
@@ -307,13 +292,10 @@ internal sealed class AudioService
         int channels = hello.Kind == AudioKind.System ? 2 : 1;
         using var device = AudioDevices.Open(route.DeviceId, DataFlow.Render);
         AudioDevices.CheckFeedback(settings, device.ID);
-        var buffer = new BufferedWaveProvider(WaveFormat.CreateIeeeFloatWaveFormat(48000, channels))
-        {
-            BufferDuration = TimeSpan.FromMilliseconds(settings.BufferMilliseconds + 100),
-            DiscardOnBufferOverflow = true,
-            ReadFully = true,
-        };
-        using var playback = new WasapiOut(device, AudioClientShareMode.Shared, true, Math.Min(settings.BufferMilliseconds, 100));
+        int queueLimit = AudioLatency.QueueMilliseconds(settings.LowLatency, settings.BufferMilliseconds);
+        var buffer = new LiveAudioBuffer(channels, queueLimit, settings.LowLatency ? 20 : queueLimit);
+        int playbackMilliseconds = AudioLatency.PlaybackMilliseconds(settings.LowLatency, settings.BufferMilliseconds);
+        using var playback = new WasapiOut(device, AudioClientShareMode.Shared, true, playbackMilliseconds);
         using var playbackLife = CancellationTokenSource.CreateLinkedTokenSource(token);
         Exception playbackFailure = null;
         playback.PlaybackStopped += (_, args) => { playbackFailure = args.Exception; playbackLife.Cancel(); };
@@ -324,7 +306,7 @@ internal sealed class AudioService
             await tls.WriteAsync(new byte[] { 1 }, readyTimeout.Token).ConfigureAwait(false);
         }
         playback.Play();
-        SetStatus(Label(false, hello.Kind), "正在接收 " + hello.Sender + " · " + device.FriendlyName);
+        SetStatus(Label(false, hello.Kind), "正在接收 " + hello.Sender + " · " + device.FriendlyName + (settings.LowLatency ? " · 低延迟" : " · 稳定缓冲"));
         long nextCheck = 0;
         try
         {
@@ -341,8 +323,7 @@ internal sealed class AudioService
                 frameTimeout.CancelAfter(5000);
                 byte[] frame = await AudioWire.ReadPacket(tls, AudioWire.MaxFrame, frameTimeout.Token).ConfigureAwait(false);
                 AudioWire.ScaleSamples(frame, channels, route.Volume);
-                if (buffer.BufferedDuration.TotalMilliseconds > settings.BufferMilliseconds) buffer.ClearBuffer();
-                if (frame.Length > 0) buffer.AddSamples(frame, 0, frame.Length);
+                if (frame.Length > 0) buffer.Add(frame);
             }
         }
         catch (OperationCanceledException) when (playbackFailure != null) { throw new IOException("播放设备中断。", playbackFailure); }
