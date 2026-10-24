@@ -1,3 +1,13 @@
+# Standalone 0.102.2933.10 — optional elevated logon startup
+
+- Add a reversible startup checkbox backed by a current-user interactive scheduled task.
+  Use highest available privileges, a five-second logon delay, no stored password or boot trigger,
+  and no battery/long-session termination. Verify registration and preserve foreign tasks.
+- Show actual registered task state, support refreshing a moved installation path, and keep
+  in-place upgrades compatible. No service or login-screen control is added.
+- Validate generated task XML against the real Windows Task Scheduler without registering in tests.
+- Clarify the two audio setup roles and the need for a working mouse connection before audio testing.
+
 # Standalone 0.102.2933.9 — default administrator startup and stale audio endpoints
 
 - Request same-account administrator rights before initializing input, settings or audio.

@@ -42,7 +42,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         root.Controls.Add(new Label
         {
             Dock = DockStyle.Fill,
-            Text = "两台电脑先完成鼠标配对，再分别启用发送和接收。\r\n常用搭配：主电脑发送麦克风、接收系统声音；副电脑做相反设置。",
+            Text = "点击下方“一键配置”：耳机插在哪台，哪台选主电脑；另一台选副电脑。\r\n两边配置后先确认鼠标能跨屏，再在副电脑播放声音测试。等待鼠标连接时音频不会传输。",
         }, 0, 0);
         var tabs = new TabControl { Dock = DockStyle.Fill };
         sendSystem = new RouteEditor("把本机系统声音发送到另一台电脑", settings.SendSystem, DataFlow.Render);

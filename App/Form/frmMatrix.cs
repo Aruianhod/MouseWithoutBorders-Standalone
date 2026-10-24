@@ -76,6 +76,39 @@ namespace MouseWithoutBorders
             updatePage.Controls.Add(elevateButton);
             updatePage.Controls.Add(new Label { Text = "默认以管理员身份启动；由 Windows 请求授权，配对与设置保留。\r\n首次启动取消授权时不运行程序；需在被控制的电脑上更新。\r\n不包含服务模式，不能控制 UAC 安全桌面或登录界面。", AutoSize = true, Location = new Point(24, 196) });
 
+            var autoStart = new CheckBox { Text = "登录 Windows 后自动启动（管理员权限）", AutoSize = true, Location = new Point(24, 268) };
+            var startupStatus = new Label { Text = "仅在当前用户登录后启动；取消勾选即可关闭。\r\n启用后请保持程序文件夹位置不变。", AutoSize = true, Location = new Point(24, 304) };
+            updatePage.Controls.Add(autoStart); updatePage.Controls.Add(startupStatus);
+            bool loadingStartup = true;
+            Shown += (_, _) =>
+            {
+                try
+                {
+                    var startup = StartupRegistration.Read();
+                    autoStart.Checked = startup.Enabled && string.Equals(startup.Executable, Application.ExecutablePath, StringComparison.OrdinalIgnoreCase);
+                    if (startup.Enabled && !autoStart.Checked) startupStatus.Text = "旧位置已启用自动启动，勾选可改为当前程序位置。";
+                }
+                catch (Exception ex) { startupStatus.Text = "读取自动启动状态失败：" + ex.Message; }
+                finally { loadingStartup = false; }
+            };
+            autoStart.CheckedChanged += (_, _) =>
+            {
+                if (loadingStartup) return;
+                bool desired = autoStart.Checked;
+                autoStart.Enabled = false;
+                try
+                {
+                    StartupRegistration.SetEnabled(desired);
+                    startupStatus.Text = desired ? "已启用：当前用户登录约 5 秒后以管理员权限启动。\r\n启用后请保持程序文件夹位置不变。" : "已关闭登录后自动启动。";
+                }
+                catch (Exception ex)
+                {
+                    loadingStartup = true; autoStart.Checked = !desired; loadingStartup = false;
+                    MessageBox.Show(this, ex.Message, "自动启动设置未完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                finally { autoStart.Enabled = true; }
+            };
+
             Text = Application.ProductName + " " + Application.ProductVersion + " - 设置";
             toolTip.ToolTipTitle = Application.ProductName;
             toolTipManual.ToolTipTitle = Application.ProductName;
