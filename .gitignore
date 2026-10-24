@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+dist/
+test-data/
+test-results/
+.vs/
+*.user
+*.suo
+*.log
+*.trx
+*.dpapi
+*.pfx
+*.pem
+.env
+.env.*

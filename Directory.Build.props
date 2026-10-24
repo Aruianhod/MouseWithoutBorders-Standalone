@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>MouseWithoutBorders</RootNamespace>
+    <Version>0.102.2933.1</Version>
+    <Product>Mouse Without Borders Standalone</Product>
+    <Company>Independent build from Microsoft PowerToys source</Company>
+    <Copyright>Microsoft Corporation and standalone contributors. MIT License.</Copyright>
+    <DefineConstants>$(DefineConstants);SHOW_ON_WINLOGON;CUSTOMIZE_LOGON_SCREEN</DefineConstants>
+    <DebugType>none</DebugType>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildThisFileDirectory)=/_/src/</PathMap>
+    <!-- Keep upstream per-monitor DPI manifest required by the native input engine. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="StreamJsonRpc" Version="2.21.69" />
+    <PackageReference Include="MessagePack" Version="3.1.12" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="System.IO.Abstractions" Version="22.0.13" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.0" />
+  </ItemGroup>
+</Project>

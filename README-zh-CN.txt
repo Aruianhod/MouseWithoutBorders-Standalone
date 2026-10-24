@@ -1,0 +1,68 @@
+无界鼠标独立便携版 / Mouse Without Borders Standalone
+版本：0.102.2933.1（基于 Microsoft PowerToys v0.102.2933.0）
+构建日期：2026-10-24
+
+这是什么
+这是从微软 PowerToys 当前稳定版源码拆分、修改并重新编译的独立版本，
+不是微软官方签名发布的独立安装包。无需安装 PowerToys，也无需单独安装 .NET。
+适用于 Windows 11 x64、Windows 10 x64 2004 或更新系统。
+本机验证环境为 Windows 11 x64（系统版本 10.0.26200）。未在 Windows 10 上实测。
+
+开始使用
+1. 在两台电脑上解压整个 ZIP 到各自固定文件夹，不要只复制 EXE。
+2. 先退出旧版无界鼠标，并关闭 PowerToys 中的 Mouse Without Borders 模块。
+3. 两台电脑连接同一可信局域网，双击 MouseWithoutBorders.exe。
+4. 首次启动若 Windows 防火墙询问联网权限，请按你实际的网络情况自行处理。
+   建议在可信的专用网络使用；不要为此关闭防火墙。程序使用 TCP 15100、15101。
+5. 第一台电脑在向导中选择 NO，查看本机 SECURITY CODE（配对码）和 COMPUTER NAME。
+6. 第二台电脑选择 YES，填入第一台的配对码和计算机名，点击 LINK。
+7. 配对完成后，在 Machine Setup 中按桌面的实际左右位置排列电脑，点击 Apply。
+8. 将鼠标移过屏幕边缘即可控制另一台电脑，键盘输入随鼠标所在电脑切换。
+   托盘图标可打开设置和退出程序；不需要自己运行 MouseWithoutBordersHelper.exe。
+
+日常使用
+- 最多四台电脑。支持鼠标、键盘、剪贴板共享和原模块的文件传输功能。
+- 两台电脑都使用这个包。它继承当前版本的新加密协议，不要与 2.2.1.327 旧独立版混用。
+- Ctrl+Alt+F1/F2/F3/F4：切换到布局中的第 1/2/3/4 台电脑。
+- Win+Ctrl+Alt+R：重新连接。
+- Win+Ctrl+Alt+E：切换 Easy Mouse（鼠标跨屏开关）。
+- Win+Ctrl+Alt+L：锁定电脑。
+- 设置页保留原版英文界面；Other Options 可调整鼠标、剪贴板、文件传输等选项。
+- 如需开机启动，可自行把 MouseWithoutBorders.exe 的快捷方式放入当前用户“启动”文件夹。
+  本版本不会自动添加开机启动或系统服务。
+
+配置与卸载
+- 配置：%LOCALAPPDATA%\MouseWithoutBordersStandalone\settings.json
+- 上次配置备份：同目录 settings.json.bak
+- 本地日志：同目录 Logs 文件夹
+- 配置和日志不与 PowerToys 共用。不包含遥测上报。
+- 默认桌面模式按上游行为保存配对码；不要分享 settings.json 或备份文件。
+- 卸载：先从托盘退出，然后删除程序文件夹；如不再需要，可自行删除配置目录及快捷方式。
+
+范围与已知限制
+- 这是登录后桌面使用的便携版，不包含系统服务模式；不能操作 Windows 登录/锁屏界面和 UAC 安全桌面。
+- 普通权限运行时，不能控制另一台电脑上的管理员权限窗口。
+- 保留上游对物理控制台会话的要求；远程桌面/虚拟机场景不在本次验证范围。
+- 快捷键页显示当前配置，未移植 PowerToys 的完整快捷键编辑器。
+- 未提供 ARM64 / 32 位构建。
+- 程序未进行商业代码签名。若出现系统安全提示，请自行核验来源，不要关闭系统保护。
+- 已通过本机编译、自动化测试和启动检查；双电脑实际跨屏、不同 DPI、多显示器、
+  文件传输及休眠恢复需要在你的两台实际电脑上继续验证，不能把本机测试等同于双机验收。
+- 本机启动检查遇到 Windows 防火墙提示，尚未完成该提示后的完整界面交互检查。
+
+连不上时
+- 确认没有同时运行 PowerToys 版本或旧独立版，且两台都使用本包。
+- 确认两台能互相访问，网络没有 AP 隔离/访客网络隔离，防火墙允许所需的局域网连接。
+- 核对计算机名和配对码。DNS 名称无法解析时，可在设置页的 IP 映射选项中指定名称与 IP。
+- 使用重新连接快捷键；仍失败时查看 Logs 中的连接错误。
+- 配置损坏时退出程序，保留原配置后再使用 settings.json.bak 恢复。
+
+源码和许可证
+源项目：https://github.com/microsoft/PowerToys
+源版本：https://github.com/microsoft/PowerToys/releases/tag/v0.102.2933.0
+源提交：9673c84ffac3bcc55e75fbecaedcda9e7d698530
+保留 MIT LICENSE、上游 NOTICE 和依赖说明。
+源码包包含 Build.ps1 / Test.ps1；需要 Windows x64 和 .NET SDK 10.0.402。
+在源码目录运行：powershell -File .\Build.ps1
+执行测试：powershell -File .\Test.ps1
+脚本只构建/测试项目，不安装服务或修改系统防火墙。

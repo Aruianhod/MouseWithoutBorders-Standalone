@@ -1,0 +1,15 @@
+MessagePack.Annotations/3.1.12
+MessagePack/3.1.12
+MessagePackAnalyzer/3.1.12
+Microsoft.Bcl.AsyncInterfaces/8.0.0
+Microsoft.NET.StringTools/17.11.4
+Microsoft.VisualStudio.Threading.Only/17.13.61
+Microsoft.VisualStudio.Validation/17.8.8
+Nerdbank.Streams/2.11.90
+Newtonsoft.Json/13.0.4
+StreamJsonRpc/2.21.69
+System.IO.Abstractions/22.0.13
+System.ServiceProcess.ServiceController/10.0.0
+TestableIO.System.IO.Abstractions.Wrappers/22.0.13
+TestableIO.System.IO.Abstractions/22.0.13
+Testably.Abstractions.FileSystem.Interface/9.0.0

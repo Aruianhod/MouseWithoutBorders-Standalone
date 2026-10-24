@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>MouseWithoutBordersHelper</AssemblyName>
+    <ApplicationIcon>..\Logo.ico</ApplicationIcon>
+    <DefineConstants>$(DefineConstants);MM_HELPER</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Class\IClipboardHelper.cs;..\Class\IpcChannel.cs;..\Core\IpcChannelHelper.cs" />
+    <Compile Include="..\..\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
