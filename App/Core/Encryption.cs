@@ -247,7 +247,7 @@ internal static class Encryption
     internal static bool IsKeyValid(string key, out string error)
     {
         error = string.IsNullOrEmpty(key) || key.Length < 16 || Class.PairingKeyCodec.IsEncryptedValue(key)
-            ? "Key must have at least 16 characters in length (spaces are discarded). Key must be auto generated in one of the machines."
+            ? "配对码至少需要 16 个字符（忽略空格）。请使用任一电脑自动生成的配对码。"
             : null;
 
         return error == null;

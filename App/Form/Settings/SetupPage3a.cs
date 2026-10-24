@@ -18,9 +18,9 @@ namespace MouseWithoutBorders
         private readonly Image[] _frames = { Images.copy_paste_example, Images.drag_example, Images.keyboard_example };
         private readonly string[] _messages =
         {
-                                                  "Copy && paste across screens",
-                                                  "Drag files across screens",
-                                                  "Share keyboard across screens",
+                                                  "在电脑间复制和粘贴",
+                                                  "在电脑间拖动文件",
+                                                  "多台电脑共用键盘",
         };
 
         private readonly int[] _timing = { 1000, 1000, 2000 };
@@ -68,7 +68,7 @@ namespace MouseWithoutBorders
             SocketStuff.InvalidKeyFound = false;
             SocketStuff.InvalidKeyFoundOnClientSocket = false;
 
-            ShowStatus($"Connecting...");
+            ShowStatus($"正在连接…");
 
             MachineStuff.SwitchToMultipleMode(false, false);
             Common.ReopenSockets(true);
@@ -83,7 +83,7 @@ namespace MouseWithoutBorders
 
                 if ((connectedClientSocket = Common.GetConnectedClientSocket()) != null)
                 {
-                    ShowStatus($"Connected from local IP Address: {connectedClientSocket.Address}.");
+                    ShowStatus($"已连接，本机 IP：{connectedClientSocket.Address}");
                     InitAndCleanup.UpdateMachineTimeAndID();
 
                     Common.MMSleep(1);
@@ -93,7 +93,7 @@ namespace MouseWithoutBorders
                 else if (SocketStuff.InvalidKeyFoundOnClientSocket)
                 {
                     invalidKey = true;
-                    ShowStatus("Status: InvalidKey.");
+                    ShowStatus("配对码不一致。");
                     Common.MMSleep(3);
                     break;
                 }
@@ -136,15 +136,15 @@ namespace MouseWithoutBorders
                 if (invalidKey)
                 {
                     Common.ShowToolTip(
-                        "Security Codes not matched.\r\nVerify that you entered the same code in all machines.\r\nAnd make sure you run the same version of "
-                        + Application.ProductName + " in all machines.\r\nThis version: " + FrmAbout.AssemblyVersion,
+                        "配对码不一致。\r\n请在所有电脑输入相同的配对码，并使用相同版本的"
+                        + Application.ProductName + "。\r\n当前版本：" + FrmAbout.AssemblyVersion,
                         20000);
                 }
                 else
                 {
-                    string helpText = "Connection error!";
-                    helpText += "\r\nPlease check if your machines are connected to the same network, note that " + Application.ProductName + " works better with wired connection.";
-                    helpText += "\r\nAnd double check if " + Application.ProductName + " is allowed through firewall in all machines.";
+                    string helpText = "连接失败！";
+                    helpText += "\r\n请确认电脑连接到同一局域网。" + Application.ProductName + "使用有线连接通常更稳定。";
+                    helpText += "\r\n请确认所有电脑的防火墙均允许" + Application.ProductName + "访问局域网。";
                     Common.ShowToolTip(helpText, 30000);
                 }
             }

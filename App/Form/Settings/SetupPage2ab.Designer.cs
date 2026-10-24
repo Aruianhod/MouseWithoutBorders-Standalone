@@ -50,7 +50,7 @@ namespace MouseWithoutBorders
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(356, 53);
             this.label1.TabIndex = 2;
-            this.label1.Text = "Sorry!";
+            this.label1.Text = "连接未成功";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // label6
@@ -61,7 +61,7 @@ namespace MouseWithoutBorders
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(130, 18);
             this.label6.TabIndex = 7;
-            this.label6.Text = "SECURITY CODE";
+            this.label6.Text = "配对码";
             this.label6.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
             // 
             // label4
@@ -72,9 +72,7 @@ namespace MouseWithoutBorders
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(332, 79);
             this.label4.TabIndex = 27;
-            this.label4.Text = "It looks like we were unable to connect to your computer. Make sure that all of y" +
-                "our computers are on the same network and that you have the correct information " +
-                "filled in below.";
+            this.label4.Text = "请确认两台电脑位于同一局域网，使用相同版本和配对码，并允许程序通过防火墙。核对后重试。";
             // 
             // label2
             // 
@@ -86,7 +84,7 @@ namespace MouseWithoutBorders
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(128, 16);
             this.label2.TabIndex = 23;
-            this.label2.Text = "Where can I find this?";
+            this.label2.Text = "在哪里查看？";
             // 
             // ExpandHelpButton
             // 

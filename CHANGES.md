@@ -1,4 +1,4 @@
-# Standalone 0.102.2933.1
+# Standalone 0.102.2933.2
 
 Based on Microsoft PowerToys release `v0.102.2933.0`, commit
 `9673c84ffac3bcc55e75fbecaedcda9e7d698530` (MIT licensed).
@@ -34,3 +34,5 @@ plus standalone defaults, immediate persistence/reload, malformed configuration 
 encrypted data over a real loopback TCP socket, and repeated clipboard IPC reconnection.
 One upstream test of private .NET implementation details is intentionally ignored upstream.
 Physical two-computer and multi-monitor validation remains outstanding.
+
+Chinese edition: localize the pairing wizard, settings, tray menus, connection status and common dialogs. Draw Chinese captions for the wizard image buttons; preserve stored Easy Mouse enum values. Persist changes made in Other Options immediately. Verified Chinese layout and option persistence in the running final build.

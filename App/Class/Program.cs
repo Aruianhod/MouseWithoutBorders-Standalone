@@ -97,13 +97,13 @@ namespace MouseWithoutBorders.Class
                 bool serviceMode = false;
                 if (runningAsSystem || !string.IsNullOrEmpty(firstArg))
                 {
-                    MessageBox.Show("This standalone edition runs on the signed-in desktop without service mode.", Application.ProductName);
+                    MessageBox.Show("本独立版用于登录后的桌面，不包含系统服务模式。", Application.ProductName);
                     return;
                 }
                 var otherEditions = Process.GetProcessesByName("PowerToys.MouseWithoutBorders");
                 if (otherEditions.Length != 0)
                 {
-                    MessageBox.Show("Turn off Mouse Without Borders in PowerToys before starting this standalone edition.", Application.ProductName);
+                    MessageBox.Show("请先关闭 PowerToys 中的无界鼠标模块，再启动独立版。", Application.ProductName);
                     return;
                 }
 
@@ -264,7 +264,7 @@ namespace MouseWithoutBorders.Class
             catch (Exception e)
             {
                 Logger.Log(e);
-                MessageBox.Show("Mouse Without Borders could not start.\r\n" + e.Message + "\r\n\r\nSee the Logs folder in: " + Microsoft.PowerToys.Settings.UI.Library.SettingsUtils.DataDirectory,
+                MessageBox.Show("无界鼠标启动失败。\r\n" + e.Message + "\r\n\r\n日志位于以下目录的 Logs 文件夹：" + Microsoft.PowerToys.Settings.UI.Library.SettingsUtils.DataDirectory,
                     Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

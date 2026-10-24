@@ -87,7 +87,7 @@ namespace MouseWithoutBorders
                 localhost = value;
                 if (localhost)
                 {
-                    labelStatusClient.Text = "local machine";
+                    labelStatusClient.Text = "本机";
                     labelStatusServer.Text = "...";
                     CheckAble = false;
                 }
@@ -125,39 +125,39 @@ namespace MouseWithoutBorders
             switch (status)
             {
                 case SocketStatus.Resolving:
-                    rv = "Resolving";
+                    rv = "解析中";
                     break;
 
                 case SocketStatus.Connected:
-                    rv = "Connected";
+                    rv = "已连接";
                     break;
 
                 case SocketStatus.Connecting:
-                    rv = "Connecting";
+                    rv = "连接中";
                     break;
 
                 case SocketStatus.Error:
-                    rv = "Error";
+                    rv = "错误";
                     break;
 
                 case SocketStatus.ForceClosed:
-                    rv = "Closed";
+                    rv = "已断开";
                     break;
 
                 case SocketStatus.Handshaking:
-                    rv = "Handshaking";
+                    rv = "验证中";
                     break;
 
                 case SocketStatus.SendError:
-                    rv = "Send error";
+                    rv = "发送失败";
                     break;
 
                 case SocketStatus.InvalidKey:
-                    rv = "KeysNotMatched";
+                    rv = "配对码不一致";
                     break;
 
                 case SocketStatus.Timeout:
-                    rv = "Timed out";
+                    rv = "连接超时";
                     break;
 
                 case SocketStatus.NA:

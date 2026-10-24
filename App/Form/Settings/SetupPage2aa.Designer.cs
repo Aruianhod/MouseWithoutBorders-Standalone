@@ -44,7 +44,7 @@ namespace MouseWithoutBorders
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(356, 150);
             this.label1.TabIndex = 2;
-            this.label1.Text = "Just one more step\r\nand your computers\r\nwill be linked!";
+            this.label1.Text = "输入另一台电脑的信息\r\n即可连接";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // label6
@@ -55,7 +55,7 @@ namespace MouseWithoutBorders
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(130, 18);
             this.label6.TabIndex = 7;
-            this.label6.Text = "SECURITY CODE";
+            this.label6.Text = "配对码";
             this.label6.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
             // 
             // label2
@@ -68,7 +68,7 @@ namespace MouseWithoutBorders
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(128, 16);
             this.label2.TabIndex = 23;
-            this.label2.Text = "Where can I find this?";
+            this.label2.Text = "在哪里查看？";
             // 
             // panel1
             // 

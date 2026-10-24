@@ -60,7 +60,7 @@ namespace MouseWithoutBorders
             this.labelProductName.Name = "labelProductName";
             this.labelProductName.Size = new System.Drawing.Size(87, 13);
             this.labelProductName.TabIndex = 27;
-            this.labelProductName.Text = "Product Name";
+            this.labelProductName.Text = "无界鼠标";
             this.labelProductName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // labelCopyright
@@ -72,7 +72,7 @@ namespace MouseWithoutBorders
             this.labelCopyright.Name = "labelCopyright";
             this.labelCopyright.Size = new System.Drawing.Size(51, 13);
             this.labelCopyright.TabIndex = 28;
-            this.labelCopyright.Text = "Copyright";
+            this.labelCopyright.Text = "版权";
             this.labelCopyright.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // labelCompanyName
@@ -85,7 +85,7 @@ namespace MouseWithoutBorders
             this.labelCompanyName.Name = "labelCompanyName";
             this.labelCompanyName.Size = new System.Drawing.Size(94, 13);
             this.labelCompanyName.TabIndex = 29;
-            this.labelCompanyName.Text = "Company Name";
+            this.labelCompanyName.Text = "项目作者";
             this.labelCompanyName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // groupBoxContributors
@@ -96,7 +96,7 @@ namespace MouseWithoutBorders
             this.groupBoxContributors.Size = new System.Drawing.Size(466, 350);
             this.groupBoxContributors.TabIndex = 30;
             this.groupBoxContributors.TabStop = false;
-            this.groupBoxContributors.Text = " Contributors ";
+            this.groupBoxContributors.Text = "贡献者";
             // 
             // textBoxContributors
             // 
@@ -117,7 +117,7 @@ namespace MouseWithoutBorders
             this.okButton.Name = "okButton";
             this.okButton.Size = new System.Drawing.Size(75, 23);
             this.okButton.TabIndex = 24;
-            this.okButton.Text = "&OK";
+            this.okButton.Text = "确定";
             // 
             // frmAbout
             // 

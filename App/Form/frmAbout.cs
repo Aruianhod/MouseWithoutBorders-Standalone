@@ -24,10 +24,10 @@ namespace MouseWithoutBorders
         internal FrmAbout()
         {
             InitializeComponent();
-            Text = string.Format(CultureInfo.CurrentCulture, "About {0}", AssemblyTitle);
+            Text = string.Format(CultureInfo.CurrentCulture, "关于 {0}", AssemblyTitle);
             labelProductName.Text = string.Format(CultureInfo.CurrentCulture, "{0} {1}", AssemblyProduct, AssemblyVersion);
             labelCopyright.Text = AssemblyCopyright;
-            labelCompanyName.Text = "Project creator: Truong Do (Đỗ Đức Trường)";
+            labelCompanyName.Text = "原项目作者：Truong Do (Đỗ Đức Trường)";
 
             textBoxContributors.Text += "* Microsoft Garage: Quinn Hawkins, Michael Low, Joe Coplen, Nino Yuniardi, Gwyneth Marshall, David Andrews, Karen Luecking";
             textBoxContributors.Text += "\r\n* Peter Hauge\t\t- Visual Studio";
@@ -59,7 +59,7 @@ namespace MouseWithoutBorders
             textBoxContributors.Text += "\r\n* Loren Ponten\t\t- Surface Hub";
             textBoxContributors.Text += "\r\n* Paul Schmitt\t\t- WWL";
 
-            textBoxContributors.Text += "\r\n\r\n* And many other Users!";
+            textBoxContributors.Text += "\r\n\r\n* 以及众多使用者！";
         }
 
         internal static string AssemblyTitle

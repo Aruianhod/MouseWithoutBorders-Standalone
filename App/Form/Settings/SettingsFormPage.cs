@@ -53,7 +53,7 @@ namespace MouseWithoutBorders
         private void ButtonSkip_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show(
-                "It is strongly recommended that you complete the setup first! Are you sure you want to skip these steps?",
+                "建议先完成配对。确定跳过向导，直接打开设置吗？",
                 Application.ProductName,
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning,

@@ -61,7 +61,7 @@ namespace MouseWithoutBorders
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(330, 56);
             this.label1.TabIndex = 2;
-            this.label1.Text = "Almost done here...";
+            this.label1.Text = "本机已准备好";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // panel2
@@ -82,9 +82,7 @@ namespace MouseWithoutBorders
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(338, 80);
             this.label2.TabIndex = 3;
-            this.label2.Text = "Just keep this window open or write down the information below. Then head over to your other computer and " +
-                "install Mouse w/o Borders. You can finish the setup and configuration over there" +
-                ".";
+            this.label2.Text = "保持此窗口打开，然后到另一台电脑启动无界鼠标。在那台电脑选择“是”，填写下方配对码和本机名称。";
             // 
             // SecurityCodeLabel
             // 
@@ -115,7 +113,7 @@ namespace MouseWithoutBorders
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(310, 24);
             this.label5.TabIndex = 6;
-            this.label5.Text = "Now you\'re all done over here!";
+            this.label5.Text = "接下来请在另一台电脑操作";
             // 
             // label6
             // 
@@ -125,7 +123,7 @@ namespace MouseWithoutBorders
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(310, 15);
             this.label6.TabIndex = 7;
-            this.label6.Text = "SECURITY CODE";
+            this.label6.Text = "配对码";
             this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // label4
@@ -136,7 +134,7 @@ namespace MouseWithoutBorders
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(310, 15);
             this.label4.TabIndex = 9;
-            this.label4.Text = "THIS COMPUTER\'S NAME";
+            this.label4.Text = "本机名称";
             this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // MachineNameLabel

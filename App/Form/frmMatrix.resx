@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -158,8 +158,13 @@
     <value>107, 17</value>
   </metadata>
   <data name="textBoxDNS.Text" xml:space="preserve">
-    <value>You should always connect to other machines by name but if there is problem Resolving machine name to IP address (rarely), you can manually enter the mappings below. The app will use the IP Addresses from the mappings below and the DNS resolution result.
-Note: If your machine IP address is dynamic, you will need to change the mapping each time the machine IP address changes.</value>
+    <value>当计算机名称无法自动解析时，可在这里指定名称与 IP 地址。
+每行填写一个对应关系，例如：
+DESKTOP-A 192.168.1.10
+LAPTOP-B 192.168.1.11
+
+请使用另一台电脑的实际名称与局域网 IPv4 地址。
+修改后回到“电脑排列”，点击“应用”重新连接。</value>
   </data>
   <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>58</value>

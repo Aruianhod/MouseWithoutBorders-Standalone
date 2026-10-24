@@ -52,7 +52,7 @@ namespace MouseWithoutBorders
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(130, 18);
             this.label6.TabIndex = 7;
-            this.label6.Text = "SECURITY CODE";
+            this.label6.Text = "配对码";
             this.label6.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
             // 
             // SecurityCodeField
@@ -93,7 +93,7 @@ namespace MouseWithoutBorders
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(262, 18);
             this.label3.TabIndex = 13;
-            this.label3.Text = "OTHER COMPUTER\'S NAME";
+            this.label3.Text = "另一台电脑的名称";
             this.label3.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
             // 
             // LinkButton
@@ -121,7 +121,7 @@ namespace MouseWithoutBorders
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(128, 16);
             this.label2.TabIndex = 23;
-            this.label2.Text = "Where can I find this?";
+            this.label2.Text = "在哪里查看？";
             // 
             // ExpandHelpButton
             // 
@@ -161,8 +161,7 @@ namespace MouseWithoutBorders
             this.HelpLabel.Name = "HelpLabel";
             this.HelpLabel.Size = new System.Drawing.Size(250, 94);
             this.HelpLabel.TabIndex = 26;
-            this.HelpLabel.Text = "The security code can be found on the computer you want to link to by right click" +
-                "ing the system tray icon, selecting \"Settings\" (spaces in the key can be discarded)";
+            this.HelpLabel.Text = "在另一台电脑的配对向导中选择“否”，即可看到它的配对码和计算机名。也可以右键点击托盘图标，打开“设置”，查看并显示配对码。";
             this.HelpLabel.Visible = false;
             // 
             // SetupPage2a

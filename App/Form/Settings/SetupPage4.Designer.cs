@@ -52,7 +52,7 @@ namespace MouseWithoutBorders
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(330, 52);
             this.label1.TabIndex = 2;
-            this.label1.Text = "Success! You\'re";
+            this.label1.Text = "连接成功！";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // panel2
@@ -73,7 +73,7 @@ namespace MouseWithoutBorders
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(344, 52);
             this.label5.TabIndex = 6;
-            this.label5.Text = "almost done here...";
+            this.label5.Text = "再完成最后一步";
             this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // ExamplePicture
@@ -93,7 +93,7 @@ namespace MouseWithoutBorders
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(310, 25);
             this.label2.TabIndex = 8;
-            this.label2.Text = "Now you can do the magic of Mouse w/o Borders.";
+            this.label2.Text = "现在可以使用同一套鼠标和键盘控制两台电脑。";
             // 
             // label3
             // 
@@ -103,7 +103,7 @@ namespace MouseWithoutBorders
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(88, 38);
             this.label3.TabIndex = 9;
-            this.label3.Text = "Copy && Paste\r\nacross screens";
+            this.label3.Text = "跨电脑\r\n复制粘贴";
             this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // panel1
@@ -138,7 +138,7 @@ namespace MouseWithoutBorders
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(88, 38);
             this.label4.TabIndex = 17;
-            this.label4.Text = "Drag files\r\nacross screens";
+            this.label4.Text = "跨电脑\r\n拖动文件";
             this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // label6
@@ -149,7 +149,7 @@ namespace MouseWithoutBorders
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(97, 38);
             this.label6.TabIndex = 18;
-            this.label6.Text = "Share keyboard\r\nacross screens";
+            this.label6.Text = "跨电脑\r\n共用键盘";
             this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // SetupPage4

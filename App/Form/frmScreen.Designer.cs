@@ -88,7 +88,7 @@ namespace MouseWithoutBorders
             this.menuExit.ForeColor = System.Drawing.Color.Black;
             this.menuExit.Name = "menuExit";
             this.menuExit.Size = new System.Drawing.Size(196, 22);
-            this.menuExit.Text = "&Exit";
+            this.menuExit.Text = "退出";
             this.menuExit.Click += new System.EventHandler(this.MenuExit_Click);
             // 
             // toolStripSeparator2
@@ -101,21 +101,21 @@ namespace MouseWithoutBorders
             this.menuAbout.ForeColor = System.Drawing.Color.Black;
             this.menuAbout.Name = "menuAbout";
             this.menuAbout.Size = new System.Drawing.Size(196, 22);
-            this.menuAbout.Text = "A&bout";
+            this.menuAbout.Text = "关于";
             this.menuAbout.Click += new System.EventHandler(this.MenuAbout_Click);
             // 
             // menuHelp
             // 
             this.menuHelp.Name = "menuHelp";
             this.menuHelp.Size = new System.Drawing.Size(196, 22);
-            this.menuHelp.Text = "&Help && Questions";
+            this.menuHelp.Text = "使用帮助";
             this.menuHelp.Click += new System.EventHandler(this.MenuHelp_Click);
             // 
             // menuGenDumpFile
             // 
             this.menuGenDumpFile.Name = "menuGenDumpFile";
             this.menuGenDumpFile.Size = new System.Drawing.Size(196, 22);
-            this.menuGenDumpFile.Text = "&Generate log";
+            this.menuGenDumpFile.Text = "生成诊断日志";
             this.menuGenDumpFile.ToolTipText = "Create logfile for triage, logfile will be generated under program directory.";
             this.menuGenDumpFile.Visible = false;
             this.menuGenDumpFile.Click += new System.EventHandler(this.MenuGenDumpFile_Click);
@@ -132,14 +132,14 @@ namespace MouseWithoutBorders
             this.menuGetScreenCapture.ForeColor = System.Drawing.Color.Black;
             this.menuGetScreenCapture.Name = "menuGetScreenCapture";
             this.menuGetScreenCapture.Size = new System.Drawing.Size(196, 22);
-            this.menuGetScreenCapture.Text = "&Get Screen Capture from";
+            this.menuGetScreenCapture.Text = "获取电脑截图";
             // 
             // menuGetFromAll
             // 
             this.menuGetFromAll.Enabled = false;
             this.menuGetFromAll.Name = "menuGetFromAll";
             this.menuGetFromAll.Size = new System.Drawing.Size(85, 22);
-            this.menuGetFromAll.Text = "All";
+            this.menuGetFromAll.Text = "全部";
             this.menuGetFromAll.Click += new System.EventHandler(this.MenuGetScreenCaptureClick);
             // 
             // menuSendScreenCapture
@@ -150,20 +150,20 @@ namespace MouseWithoutBorders
             this.menuSendScreenCapture.ForeColor = System.Drawing.Color.Black;
             this.menuSendScreenCapture.Name = "menuSendScreenCapture";
             this.menuSendScreenCapture.Size = new System.Drawing.Size(196, 22);
-            this.menuSendScreenCapture.Text = "Send Screen &Capture to";
+            this.menuSendScreenCapture.Text = "发送截图到";
             // 
             // allToolStripMenuItem
             // 
             this.allToolStripMenuItem.Name = "allToolStripMenuItem";
             this.allToolStripMenuItem.Size = new System.Drawing.Size(105, 22);
-            this.allToolStripMenuItem.Text = "All";
+            this.allToolStripMenuItem.Text = "全部";
             this.allToolStripMenuItem.Click += new System.EventHandler(this.MenuSendScreenCaptureClick);
             // 
             // menuSend2Myself
             // 
             this.menuSend2Myself.Name = "menuSend2Myself";
             this.menuSend2Myself.Size = new System.Drawing.Size(105, 22);
-            this.menuSend2Myself.Text = "Myself";
+            this.menuSend2Myself.Text = "本机";
             this.menuSend2Myself.Click += new System.EventHandler(this.MenuSendScreenCaptureClick);
             // 
             // toolStripMenuItem1
@@ -175,7 +175,7 @@ namespace MouseWithoutBorders
             // 
             this.menuReinstallKeyboardAndMouseHook.Name = "menuReinstallKeyboardAndMouseHook";
             this.menuReinstallKeyboardAndMouseHook.Size = new System.Drawing.Size(196, 22);
-            this.menuReinstallKeyboardAndMouseHook.Text = "&Reinstall Input hook";
+            this.menuReinstallKeyboardAndMouseHook.Text = "重新初始化键鼠";
             this.menuReinstallKeyboardAndMouseHook.ToolTipText = "This might help when keyboard/Mouse redirection stops working";
             this.menuReinstallKeyboardAndMouseHook.Visible = false;
             this.menuReinstallKeyboardAndMouseHook.Click += new System.EventHandler(this.MenuReinstallKeyboardAndMouseHook_Click);
@@ -186,7 +186,7 @@ namespace MouseWithoutBorders
             this.menuMachineMatrix.ForeColor = System.Drawing.Color.Black;
             this.menuMachineMatrix.Name = "menuMachineMatrix";
             this.menuMachineMatrix.Size = new System.Drawing.Size(196, 22);
-            this.menuMachineMatrix.Text = "&Settings";
+            this.menuMachineMatrix.Text = "设置";
             this.menuMachineMatrix.Click += new System.EventHandler(this.MenuMachineMatrix_Click);
             // 
             // toolStripMenuItem2
@@ -199,7 +199,7 @@ namespace MouseWithoutBorders
             this.MenuAllPC.CheckOnClick = true;
             this.MenuAllPC.Name = "menuAllPC";
             this.MenuAllPC.Size = new System.Drawing.Size(196, 22);
-            this.MenuAllPC.Text = "&ALL COMPUTERS";
+            this.MenuAllPC.Text = "所有电脑";
             this.MenuAllPC.ToolTipText = "Repeat Mouse/keyboard in all machines.";
             this.MenuAllPC.Click += new System.EventHandler(this.MenuAllPC_Click);
             // 

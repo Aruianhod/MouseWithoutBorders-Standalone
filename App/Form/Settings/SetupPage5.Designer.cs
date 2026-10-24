@@ -59,7 +59,7 @@ namespace MouseWithoutBorders
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(310, 25);
             this.label3.TabIndex = 24;
-            this.label3.Text = "Have fun mousin\' around!";
+            this.label3.Text = "开始使用无界鼠标吧！";
             // 
             // panel1
             // 
@@ -79,8 +79,7 @@ namespace MouseWithoutBorders
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(310, 40);
             this.label2.TabIndex = 22;
-            this.label2.Text = "You can always get back to the settings for Mouse w/o Borders through the system " +
-                "tray icon.";
+            this.label2.Text = "随时右键点击系统托盘中的无界鼠标图标，即可重新打开设置。";
             // 
             // panel2
             // 
@@ -100,7 +99,7 @@ namespace MouseWithoutBorders
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(330, 109);
             this.label1.TabIndex = 19;
-            this.label1.Text = "All Done.\r\nNice Work!";
+            this.label1.Text = "设置完成";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // DoneButton

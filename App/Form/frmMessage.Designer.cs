@@ -47,7 +47,7 @@ namespace MouseWithoutBorders
             this.labelTitle.Name = "labelTitle";
             this.labelTitle.Size = new System.Drawing.Size(168, 16);
             this.labelTitle.TabIndex = 0;
-            this.labelTitle.Text = "Mouse Without Borders";
+            this.labelTitle.Text = "无界鼠标";
             // 
             // textExtraInfo
             // 
@@ -96,7 +96,7 @@ namespace MouseWithoutBorders
             this.textBoxMessage.ReadOnly = true;
             this.textBoxMessage.Size = new System.Drawing.Size(720, 400);
             this.textBoxMessage.TabIndex = 2;
-            this.textBoxMessage.Text = "Message Text";
+            this.textBoxMessage.Text = "消息";
             this.textBoxMessage.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // pictureBoxIcon

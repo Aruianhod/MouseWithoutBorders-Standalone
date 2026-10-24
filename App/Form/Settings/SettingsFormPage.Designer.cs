@@ -44,7 +44,7 @@ namespace MouseWithoutBorders
             this.buttonSkip.Name = "buttonSkip";
             this.buttonSkip.Size = new System.Drawing.Size(40, 23);
             this.buttonSkip.TabIndex = 1;
-            this.buttonSkip.Text = "&Skip";
+            this.buttonSkip.Text = "跳过";
             this.buttonSkip.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.buttonSkip.UseVisualStyleBackColor = true;
             this.buttonSkip.Click += new System.EventHandler(this.ButtonSkip_Click);

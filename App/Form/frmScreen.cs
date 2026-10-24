@@ -186,14 +186,14 @@ namespace MouseWithoutBorders
                 }
 
                 while (!menuSendScreenCapture.DropDown.Items[
-                    menuSendScreenCapture.DropDown.Items.Count - 1].Text.Equals("Myself", StringComparison.OrdinalIgnoreCase))
+                    menuSendScreenCapture.DropDown.Items.Count - 1].Text.Equals("本机", StringComparison.OrdinalIgnoreCase))
                 {
                     menuSendScreenCapture.DropDown.Items.Remove(menuSendScreenCapture.DropDown.Items[
                         menuSendScreenCapture.DropDown.Items.Count - 1]);
                 }
 
                 while (!menuGetScreenCapture.DropDown.Items[
-                    menuGetScreenCapture.DropDown.Items.Count - 1].Text.Equals("All", StringComparison.OrdinalIgnoreCase))
+                    menuGetScreenCapture.DropDown.Items.Count - 1].Text.Equals("全部", StringComparison.OrdinalIgnoreCase))
                 {
                     menuGetScreenCapture.DropDown.Items.Remove(menuGetScreenCapture.DropDown.Items[
                         menuGetScreenCapture.DropDown.Items.Count - 1]);
@@ -502,7 +502,7 @@ namespace MouseWithoutBorders
 
                                 Common.Sk?.Close(false);
 
-                                Common.ShowToolTip("The security key must be auto generated in one of the machines.", 10000);
+                                Common.ShowToolTip("请使用任一电脑自动生成的配对码。", 10000);
                             }
                         }
                         else if (!Encryption.KeyCorrupted && !Common.RunOnLogonDesktop && !Common.RunOnScrSaverDesktop && !Setting.Values.FirstRun && Common.AtLeastOneSocketConnected())
@@ -520,7 +520,7 @@ namespace MouseWithoutBorders
                             }
                             else if (myKeyDaysToExpire <= 15)
                             {
-                                Common.ShowToolTip($"The security key will expire in {myKeyDaysToExpire} days! Please regenerate a new key.", 10000);
+                                Common.ShowToolTip($"配对码将在 {myKeyDaysToExpire} 天后过期，请重新生成。", 10000);
                             }
                         }
                     }
@@ -927,7 +927,7 @@ namespace MouseWithoutBorders
 
             if (captureFile != null && File.Exists(captureFile))
             {
-                if (menuCaption.Equals("Myself", StringComparison.OrdinalIgnoreCase))
+                if (menuCaption.Equals("本机", StringComparison.OrdinalIgnoreCase))
                 {
                     Common.OpenImage(captureFile);
                 }
@@ -943,7 +943,7 @@ namespace MouseWithoutBorders
             string menuCaption = (sender as ToolStripMenuItem).Text;
 
             // Send CaptureScreenCommand
-            ID des = menuCaption.Equals("All", StringComparison.OrdinalIgnoreCase) ? ID.ALL : MachineStuff.IdFromName(menuCaption);
+            ID des = menuCaption.Equals("全部", StringComparison.OrdinalIgnoreCase) ? ID.ALL : MachineStuff.IdFromName(menuCaption);
             Common.SendPackage(des, PackageType.CaptureScreenCommand);
         }
 
@@ -1225,11 +1225,11 @@ namespace MouseWithoutBorders
                     File.WriteAllText(logFile, log);
                     if (Common.RunOnLogonDesktop || Common.RunOnScrSaverDesktop)
                     {
-                        _ = MessageBox.Show("Dump file created: " + logFile, Application.ProductName);
+                        _ = MessageBox.Show("诊断文件已生成：" + logFile, Application.ProductName);
                     }
                     else
                     {
-                        Common.ShowToolTip("Dump file created: " + logFile + " and placed in the Clipboard.", 10000);
+                        Common.ShowToolTip("诊断文件已生成：" + logFile + "，路径已复制到剪贴板。", 10000);
                         Clipboard.SetText(logFile);
                     }
                 }

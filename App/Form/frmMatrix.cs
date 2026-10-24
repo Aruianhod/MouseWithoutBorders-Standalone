@@ -53,7 +53,7 @@ namespace MouseWithoutBorders
 
             textBoxEnc.Font = new System.Drawing.Font(Control.DefaultFont.Name, 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
 
-            Text = Application.ProductName + " " + Application.ProductVersion + " - Settings";
+            Text = Application.ProductName + " " + Application.ProductVersion + " - 设置";
             toolTip.ToolTipTitle = Application.ProductName;
             toolTipManual.ToolTipTitle = Application.ProductName;
             labelExitMM.Text = "Exit the application, Ctrl+Alt+Shift+:";
@@ -105,7 +105,7 @@ namespace MouseWithoutBorders
             if (Process.GetCurrentProcess().SessionId != NativeMethods.WTSGetActiveConsoleSessionId())
             {
                 Program.StartService();
-                Common.ShowToolTip("New settings applied on the physical console session!", 3000, ToolTipIcon.Warning, false);
+                Common.ShowToolTip("新设置已应用到本机桌面。", 3000, ToolTipIcon.Warning, false);
             }
             else
             {
@@ -399,7 +399,7 @@ namespace MouseWithoutBorders
             // 1 sec
             if (helperTimerCounter % 5 == 0)
             {
-                comboBoxEasyMouseOption.Text = ((EasyMouseOption)Setting.Values.EasyMouse).ToString();
+                comboBoxEasyMouseOption.Text = UiLanguage.EasyMouseLabel(Setting.Values.EasyMouse);
 
                 if (!textBoxMachineName2IP.Text.Equals(Setting.Values.Name2IP, StringComparison.OrdinalIgnoreCase))
                 {
@@ -480,8 +480,8 @@ namespace MouseWithoutBorders
                     showInvalidKeyMessage = true;
 
                     Common.ShowToolTip(
-                        "Security Keys not matched.\r\nVerify that you entered the same key in all machines.\r\nAnd make sure you run the same version of "
-                        + Application.ProductName + " in all machines.\r\n" + keyNotMatchedMachines + "\r\nThis version: " + FrmAbout.AssemblyVersion,
+                        "配对码不一致。\r\n请在所有电脑输入相同配对码，并使用相同版本的"
+                        + Application.ProductName + "。\r\n" + keyNotMatchedMachines + "\r\n当前版本：" + FrmAbout.AssemblyVersion,
                         20000,
                         ToolTipIcon.Warning,
                         Setting.Values.ShowClipNetStatus);
@@ -804,11 +804,11 @@ namespace MouseWithoutBorders
 
             // Note(@htcfreek): Disable checkboxes of settings that we don't support in the PowerToys implementation
             checkBoxDisableCAD.Enabled = false;
-            checkBoxDisableCAD.Text = checkBoxDisableCAD.Text + " [Unsupported!]";
+            checkBoxDisableCAD.Text = checkBoxDisableCAD.Text + "［不支持］";
             checkBoxHideLogo.Enabled = false;
-            checkBoxHideLogo.Text = checkBoxHideLogo.Text + " [Unsupported!]";
+            checkBoxHideLogo.Text = checkBoxHideLogo.Text + "［不支持］";
             checkBoxSendLog.Enabled = false;
-            checkBoxSendLog.Text = checkBoxSendLog.Text + " [Unsupported!]";
+            checkBoxSendLog.Text = checkBoxSendLog.Text + "［不支持］";
 
             checkBoxShareClipboard.Checked = Setting.Values.ShareClipboard;
 
@@ -854,7 +854,7 @@ namespace MouseWithoutBorders
                 ? "Ctrl*3"
                 : Setting.Values.HotKeySwitch2AllPC == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeySwitch2AllPC });
 
-            comboBoxEasyMouseOption.Text = ((EasyMouseOption)Setting.Values.EasyMouse).ToString();
+            comboBoxEasyMouseOption.Text = UiLanguage.EasyMouseLabel(Setting.Values.EasyMouse);
 
             comboBoxEasyMouse.Text = Setting.Values.HotKeyToggleEasyMouse == 0 ? "Disable" : new string(new char[] { (char)Setting.Values.HotKeyToggleEasyMouse });
 #endif
@@ -867,13 +867,15 @@ namespace MouseWithoutBorders
                 AutoSize = false,
                 Dock = DockStyle.Top,
                 Height = 90,
-                Text = "Switch computer: Ctrl+Alt+F1 / F2 / F3 / F4\r\n" +
-                    "Reconnect: " + Setting.Values.HotKeyReconnect + "\r\n" +
-                    "Toggle Easy Mouse: " + Setting.Values.HotKeyToggleEasyMouse + "\r\n" +
-                    "Lock computers: " + Setting.Values.HotKeyLockMachine,
+                Text = "切换电脑： Ctrl+Alt+F1 / F2 / F3 / F4\r\n" +
+                    "重新连接： " + Setting.Values.HotKeyReconnect + "\r\n" +
+                    "切换鼠标跨屏： " + Setting.Values.HotKeyToggleEasyMouse + "\r\n" +
+                    "锁定电脑： " + Setting.Values.HotKeyLockMachine,
             };
             comboBoxEasyMouseOption.Enabled = true;
-            comboBoxEasyMouseOption.Text = ((EasyMouseOption)Setting.Values.EasyMouse).ToString();
+            comboBoxEasyMouseOption.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBoxEasyMouseOption.AccessibleName = "鼠标跨屏方式";
+            comboBoxEasyMouseOption.Text = UiLanguage.EasyMouseLabel(Setting.Values.EasyMouse);
             comboBoxEasyMouseOption.Dock = DockStyle.Bottom;
             groupBoxShortcuts.Controls.Add(shortcutSummary);
             groupBoxShortcuts.Controls.Add(comboBoxEasyMouseOption);
@@ -882,7 +884,7 @@ namespace MouseWithoutBorders
             if (Setting.Values.ShareClipboardIsGpoConfigured)
             {
                 checkBoxShareClipboard.Enabled = false;
-                checkBoxShareClipboard.Text += " [Managed]";
+                checkBoxShareClipboard.Text += "［组织管理］";
 
                 // transfer file setting depends on clipboard sharing
                 checkBoxTransferFile.Enabled = false;
@@ -891,32 +893,32 @@ namespace MouseWithoutBorders
             if (Setting.Values.TransferFileIsGpoConfigured)
             {
                 checkBoxTransferFile.Enabled = false;
-                checkBoxTransferFile.Text += " [Managed]";
+                checkBoxTransferFile.Text += "［组织管理］";
             }
 
             if (Setting.Values.BlockScreenSaverIsGpoConfigured)
             {
                 checkBoxBlockScreenSaver.Enabled = false;
-                checkBoxBlockScreenSaver.Text += " [Managed]";
+                checkBoxBlockScreenSaver.Text += "［组织管理］";
             }
 
             if (Setting.Values.SameSubNetOnlyIsGpoConfigured)
             {
                 checkBoxSameSubNet.Enabled = false;
-                checkBoxSameSubNet.Text += " [Managed]";
+                checkBoxSameSubNet.Text += "［组织管理］";
             }
 
             if (Setting.Values.ReverseLookupIsGpoConfigured)
             {
                 checkBoxReverseLookup.Enabled = false;
-                checkBoxReverseLookup.Text += " [Managed]";
+                checkBoxReverseLookup.Text += "［组织管理］";
             }
 
             if (Setting.Values.Name2IpIsGpoConfigured)
             {
                 textBoxMachineName2IP.Enabled = false;
                 groupBoxDNS.ForeColor = Color.DimGray;
-                groupBoxDNS.Text += " [Managed]";
+                groupBoxDNS.Text += "［组织管理］";
             }
 
             if (Setting.Values.Name2IpPolicyListIsGpoConfigured)
@@ -1032,6 +1034,7 @@ namespace MouseWithoutBorders
                     c.Enabled = true;
                 }
             }
+            Setting.Values.SaveSettings();
         }
 
         private void CheckBoxBlockScreenSaver_CheckedChanged(object sender, EventArgs e)
@@ -1082,7 +1085,7 @@ namespace MouseWithoutBorders
             string selectedOption = comboBoxEasyMouseOption.Text;
             int oldEasyMouseOption = Setting.Values.EasyMouse;
 
-            Setting.Values.EasyMouse = Enum.TryParse<EasyMouseOption>(selectedOption, out EasyMouseOption easyMouseOption) ? (int)easyMouseOption : (int)EasyMouseOption.Enable;
+            Setting.Values.EasyMouse = UiLanguage.ParseEasyMouseLabel(selectedOption);
 
             if (oldEasyMouseOption != Setting.Values.EasyMouse)
             {
@@ -1129,8 +1132,8 @@ namespace MouseWithoutBorders
 
         private void ButtonNewKey_Click(object sender, EventArgs e)
         {
-            string message = "Do you really want to generate a new key?\r\n" +
-                "(You would need to enter this key in all other machines to re-establish the connections)";
+            string message = "确定生成新的配对码吗？\r\n" +
+                "需要在其他电脑输入这个新配对码，才能重新连接。";
 
             if (MessageBox.Show(message, Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
             {
@@ -1141,7 +1144,7 @@ namespace MouseWithoutBorders
                 checkBoxShowKey.Checked = true;
                 Encryption.GeneratedKey = true;
                 ButtonOK_Click(null, null);
-                Common.ShowToolTip("New security key was generated, update other machines to the same key.", 10000, ToolTipIcon.Info, false);
+                Common.ShowToolTip("已生成新配对码，请在其他电脑上更新为相同的配对码。", 10000, ToolTipIcon.Info, false);
             }
         }
 
@@ -1188,7 +1191,7 @@ namespace MouseWithoutBorders
             string miniLog = Helper.GetMiniLog(new[] { groupBoxOtherOptions.Controls, groupBoxShortcuts.Controls });
 
             Clipboard.SetText(miniLog);
-            Common.ShowToolTip("Log has been placed in the clipboard.", 30000, ToolTipIcon.Info, false);
+            Common.ShowToolTip("日志已复制到剪贴板。", 30000, ToolTipIcon.Info, false);
         }
 
         private void ComboBoxScreenCapture_TextChanged(object sender, EventArgs e)
@@ -1198,10 +1201,10 @@ namespace MouseWithoutBorders
 
         private void LinkLabelReConfigure_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            string message = "WARNING: This will clear the Computer Matrix and allows you to run the setup experience like the first time you installed the program.\r\n";
-            message += "You need to start this setup experience in all machines. In the next Dialog, click NO in the first machine and click YES in the rest of the machines.\r\n";
-            message += "And then follow the steps to complete the configuration.\r\n\r\n";
-            message += "Are you sure you want to continue?";
+            string message = "这将清空电脑排列，并重新开始配对向导。\r\n";
+            message += "请在所有电脑上重新配对：第一台选择“否”，其他电脑选择“是”。\r\n";
+            message += "然后按向导完成设置。\r\n\r\n";
+            message += "确定继续吗？";
 
             if (MessageBox.Show(message, Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == System.Windows.Forms.DialogResult.Yes)
             {

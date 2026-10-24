@@ -50,6 +50,31 @@ namespace MouseWithoutBorders
         private bool _hovering;
         private bool _buttonDown;
 
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            string caption = UiLanguage.ButtonCaption(Name);
+            if (caption == null)
+            {
+                base.OnPaint(e);
+                return;
+            }
+
+            AccessibleName = caption;
+            AccessibleRole = AccessibleRole.PushButton;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var bounds = new Rectangle(2, 2, Width - 5, Height - 5);
+            using var fill = new SolidBrush(!Enabled ? Color.FromArgb(110, 130, 140) :
+                _buttonDown ? Color.FromArgb(0, 90, 140) :
+                _hovering ? Color.FromArgb(0, 150, 210) : Color.FromArgb(0, 120, 180));
+            using var border = new Pen(Enabled ? Color.White : Color.LightGray, 2);
+            e.Graphics.FillEllipse(fill, bounds);
+            e.Graphics.DrawEllipse(border, bounds);
+            using var font = new Font("Microsoft YaHei UI", 12, FontStyle.Regular);
+            TextRenderer.DrawText(e.Graphics, caption, font, ClientRectangle,
+                Enabled ? Color.White : Color.LightGray,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        }
+
         protected override void OnVisibleChanged(EventArgs e)
         {
             UpdateEnabledState();

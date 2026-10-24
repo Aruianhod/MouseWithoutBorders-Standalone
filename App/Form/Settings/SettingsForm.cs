@@ -123,7 +123,7 @@ namespace MouseWithoutBorders
         internal void ShowTip(ToolTipIcon icon, string msg, int durationInMilliseconds)
         {
             int x = 0;
-            string text = msg + $"\r\n {(lastMessage.Equals(msg, StringComparison.OrdinalIgnoreCase) ? string.Empty : $"\r\nPrevious message/error: {lastMessage}")} ";
+            string text = msg + $"\r\n {(lastMessage.Equals(msg, StringComparison.OrdinalIgnoreCase) ? string.Empty : $"\r\n上一条提示： {lastMessage}")} ";
             lastMessage = msg;
             int y = (-text.Split(Separator, StringSplitOptions.None).Length * 15) - 30;
 
