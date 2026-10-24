@@ -87,14 +87,20 @@ public sealed class AudioTests
     }
 
     [TestMethod]
-    [DataRow(1)]
-    [DataRow(2)]
-    public async Task AudioPcmAndHeartbeatTravelOverAuthenticatedTlsAndReconnect(int streamKind)
+    [DataRow(1, "127.0.0.1")]
+    [DataRow(2, "127.0.0.1")]
+    [DataRow(1, "::ffff:127.0.0.1")]
+    [DataRow(2, "::ffff:127.0.0.1")]
+    [DataRow(1, "::1")]
+    [DataRow(2, "::1")]
+    public async Task AudioPcmAndHeartbeatTravelOverAuthenticatedTlsAndReconnect(int streamKind, string peerIp)
     {
         var kind = (AudioKind)streamKind;
         using var certificate = AudioWire.CreateCertificate();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        var peerAddress = IPAddress.Parse(peerIp);
+        var listenAddress = peerAddress.IsIPv4MappedToIPv6 ? peerAddress.MapToIPv4() : peerAddress;
+        var listener = new TcpListener(listenAddress, 0);
         listener.Start();
         try
         {
@@ -116,8 +122,8 @@ public sealed class AudioTests
                     Assert.AreEqual(0, (await AudioWire.ReadPacket(tls, AudioWire.MaxFrame, timeout.Token)).Length);
                     await AudioWire.WritePacket(tls, frame, timeout.Token);
                 });
-                using var client = new TcpClient();
-                await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port, timeout.Token);
+                using var client = await AudioService.ConnectPeerAsync(peerAddress, ((IPEndPoint)listener.LocalEndpoint).Port, timeout.Token);
+                Assert.AreEqual(listenAddress.AddressFamily, client.Client.AddressFamily);
                 using var secure = new SslStream(client.GetStream(), false);
                 try { await AudioWire.AuthenticateSender(secure, new() { Sender = "PC-A", Receiver = "PC-B", Kind = kind }, PairingKey, timeout.Token); }
                 catch { await receiving; throw; }

@@ -30,6 +30,13 @@ internal sealed class AudioService
     internal AudioOptions Options => options.Clone();
     internal string Status => string.Join(Environment.NewLine, status.OrderBy(p => p.Key).Select(p => p.Key + "：" + p.Value));
 
+    private void SetStatus(string label, string value)
+    {
+        if (status.TryGetValue(label, out string previous) && previous == value) return;
+        status[label] = value;
+        Logger.Log("Audio " + label + "：" + value);
+    }
+
     internal void Start()
     {
         try
@@ -39,7 +46,7 @@ internal sealed class AudioService
             options = loaded;
             StartWorkers();
         }
-        catch (Exception ex) { status["配置"] = "未启动音频：" + ex.Message; }
+        catch (Exception ex) { SetStatus("配置", "未启动音频：" + ex.Message); }
     }
 
     internal async Task ApplyAsync(AudioOptions value)
@@ -72,8 +79,8 @@ internal sealed class AudioService
             var tasks = new List<Task>();
             foreach (AudioKind kind in Enum.GetValues<AudioKind>())
             {
-                status[Label(true, kind)] = snapshot.Send(kind).Enabled ? "等待已配对电脑连接" : "关闭";
-                status[Label(false, kind)] = snapshot.Receive(kind).Enabled ? "等待所选电脑发送" : "关闭";
+                SetStatus(Label(true, kind), snapshot.Send(kind).Enabled ? "等待已配对电脑连接" : "关闭");
+                SetStatus(Label(false, kind), snapshot.Receive(kind).Enabled ? "等待所选电脑发送" : "关闭");
                 if (snapshot.Send(kind).Enabled) tasks.Add(SendLoop(snapshot, kind, token));
             }
             if (snapshot.Receives) tasks.Add(ListenLoop(snapshot, token));
@@ -107,6 +114,22 @@ internal sealed class AudioService
             throw new IOException("鼠标连接或配对码已变化，等待重新配对连接。");
     }
 
+    internal static async Task<TcpClient> ConnectPeerAsync(IPAddress address, int port, CancellationToken token)
+    {
+        // Input sockets are dual-stack. An IPv4 peer therefore often appears as ::ffff:x.x.x.x.
+        // TcpClient(InterNetworkV6) is IPv6-only and Windows rejects that mapped destination
+        // with WSAEADDRNOTAVAIL (10049). Use a native IPv4 socket for mapped addresses;
+        // leave real IPv6 addresses, including their scope IDs, unchanged.
+        if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
+        var client = new TcpClient(address.AddressFamily) { NoDelay = true };
+        try
+        {
+            await client.ConnectAsync(address, port, token).ConfigureAwait(false);
+            return client;
+        }
+        catch { client.Dispose(); throw; }
+    }
+
     private async Task SendLoop(AudioOptions settings, AudioKind kind, CancellationToken token)
     {
         var route = settings.Send(kind);
@@ -117,10 +140,9 @@ internal sealed class AudioService
             {
                 var address = ConnectedAddress(route.Peer) ?? throw new IOException("等待 " + route.Peer + " 的鼠标连接");
                 string key = Encryption.MyKey;
-                using var client = new TcpClient(address.AddressFamily) { NoDelay = true };
                 using var handshake = CancellationTokenSource.CreateLinkedTokenSource(token);
                 handshake.CancelAfter(TimeSpan.FromSeconds(8));
-                await client.ConnectAsync(address, settings.Port, handshake.Token).ConfigureAwait(false);
+                using var client = await ConnectPeerAsync(address, settings.Port, handshake.Token).ConfigureAwait(false);
                 using var tls = new SslStream(client.GetStream(), false);
                 await AudioWire.AuthenticateSender(tls, new AudioHello
                 {
@@ -133,11 +155,11 @@ internal sealed class AudioService
                 await CaptureAndSend(tls, settings, kind, key, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
-            catch (Exception ex) { status[label] = "等待 / 重试：" + FriendlyError(ex); }
+            catch (Exception ex) { SetStatus(label, "等待 / 重试：" + FriendlyError(ex)); }
             try { await Task.Delay(2500, token).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
         }
-        status[label] = "已停止";
+        SetStatus(label, "已停止");
     }
 
     private async Task CaptureAndSend(SslStream tls, AudioOptions settings, AudioKind kind, string key, CancellationToken token)
@@ -177,7 +199,7 @@ internal sealed class AudioService
         };
         capture.RecordingStopped += (_, args) => queue.Writer.TryComplete(args.Exception);
         capture.StartRecording();
-        status[Label(true, kind)] = "正在发送到 " + route.Peer + " · " + device.FriendlyName;
+        SetStatus(Label(true, kind), "正在发送到 " + route.Peer + " · " + device.FriendlyName);
         long nextCheck = 0;
         try
         {
@@ -218,7 +240,7 @@ internal sealed class AudioService
                 listener = new TcpListener(IPAddress.IPv6Any, settings.Port);
                 listener.Server.DualMode = true;
                 listener.Start(8);
-                status["网络"] = "音频接收端口 " + settings.Port;
+                SetStatus("网络", "音频接收端口 " + settings.Port);
                 while (!token.IsCancellationRequested)
                 {
                     var client = await listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
@@ -229,7 +251,7 @@ internal sealed class AudioService
                 }
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-            catch (Exception ex) { status["网络"] = "接收失败 / 重试：" + FriendlyError(ex); }
+            catch (Exception ex) { SetStatus("网络", "接收失败 / 重试：" + FriendlyError(ex)); }
             finally
             {
                 listener?.Stop();
@@ -269,7 +291,7 @@ internal sealed class AudioService
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
             catch (Exception ex)
             {
-                if (admitted.HasValue) status[Label(false, admitted.Value)] = "等待 / 重试：" + FriendlyError(ex);
+                if (admitted.HasValue) SetStatus(Label(false, admitted.Value), "等待 / 重试：" + FriendlyError(ex));
                 // Untrusted handshakes never overwrite an active channel's status or leak secrets.
             }
             finally
@@ -302,7 +324,7 @@ internal sealed class AudioService
             await tls.WriteAsync(new byte[] { 1 }, readyTimeout.Token).ConfigureAwait(false);
         }
         playback.Play();
-        status[Label(false, hello.Kind)] = "正在接收 " + hello.Sender + " · " + device.FriendlyName;
+        SetStatus(Label(false, hello.Kind), "正在接收 " + hello.Sender + " · " + device.FriendlyName);
         long nextCheck = 0;
         try
         {
@@ -332,6 +354,7 @@ internal sealed class AudioService
         OperationCanceledException => "音频连接超时，请确认对方已启用接收、端口相同且网络可达。",
         System.Security.Authentication.AuthenticationException => "音频认证失败，请确认两台使用相同配对码。",
         ChannelClosedException => "音频采集已停止，等待设备恢复。",
+        SocketException socket => $"网络连接失败（{socket.SocketErrorCode}/{socket.NativeErrorCode}）：{socket.Message}",
         EndOfStreamException => "对方已关闭音频连接或接收设备不可用。",
         _ => ex.Message,
     };

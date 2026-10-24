@@ -1,3 +1,12 @@
+# Standalone 0.102.2933.12 — audio connections from dual-stack input peers
+
+- Normalize IPv4-mapped IPv6 peer addresses to IPv4 before creating the audio sender socket.
+  Keep native IPv6 and scope IDs unchanged; dispose failed connection attempts.
+- Reproduced Windows error 10049 with the previous IPv6-only socket and mapped loopback peer.
+- Log audio status transitions and socket error codes without recording audio or pairing keys.
+- Route authenticated TLS PCM/heartbeat/reconnect tests through the production connection
+  factory for both audio stream types over IPv4, mapped IPv4 and native IPv6.
+
 # Standalone 0.102.2933.11 — first-time startup registration
 
 - Handle the FileNotFoundException produced by COM dynamic dispatch when a user has no
