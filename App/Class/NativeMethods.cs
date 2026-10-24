@@ -284,7 +284,7 @@ namespace MouseWithoutBorders.Class
         internal static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfoEx lpmi);
 
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
-        internal static extern int FindWindow(string ClassName, string WindowName);
+        internal static extern IntPtr FindWindow(string ClassName, string WindowName);
 
         [DllImport("kernel32.dll")]
         internal static extern uint GetCurrentThreadId();

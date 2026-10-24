@@ -56,6 +56,18 @@ namespace MouseWithoutBorders
             audioPage.Controls.Add(audioButton);
             audioPage.Controls.Add(new Label { Text = "独立配置系统声音、麦克风的发送与接收。\r\n复用现有配对关系；首次使用默认关闭。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
             tabControlSetting.TabPages.Add(audioPage);
+            var updatePage = new TabPage("软件更新");
+            var updateButton = new Button { Text = "检查更新…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
+            updateButton.Click += (_, _) => { using var updates = new Updates.UpdateForm(); updates.ShowDialog(this); };
+            updatePage.Controls.Add(updateButton);
+            updatePage.Controls.Add(new Label { Text = "从共享文件夹获取新版，确认后自动下载、替换并重启。\r\n保留配对、电脑记忆和音频设置。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
+            tabControlSetting.TabPages.Add(updatePage);
+            var filePage = new TabPage("文件传输");
+            var fileButton = new Button { Text = "拖拽传文件…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
+            fileButton.Click += (_, _) => { using var files = new Files.FileTransferForm(); files.ShowDialog(this); };
+            filePage.Controls.Add(fileButton);
+            filePage.Controls.Add(new Label { Text = "选择已连接电脑，将文件拖入窗口即可发送。\r\n支持多文件、取消及完整性校验，同名自动改名。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
+            tabControlSetting.TabPages.Add(filePage);
 
             textBoxEnc.Font = new System.Drawing.Font(Control.DefaultFont.Name, 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
 

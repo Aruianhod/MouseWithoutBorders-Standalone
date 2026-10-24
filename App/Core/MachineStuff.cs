@@ -1059,9 +1059,9 @@ internal static class MachineStuff
 
     internal static bool CheckSecondInstance(bool sendMessage = false)
     {
-        int h;
+        IntPtr h;
 
-        if ((h = NativeMethods.FindWindow(null, Setting.Values.MyID)) > 0)
+        if ((h = NativeMethods.FindWindow(null, Setting.Values.MyID)) != IntPtr.Zero)
         {
             return true;
         }

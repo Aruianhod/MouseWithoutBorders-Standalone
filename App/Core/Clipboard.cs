@@ -496,6 +496,7 @@ internal static class Clipboard
 
     private static void ReceiveAndProcessClipboardDataCore(string remoteMachine, Socket s, Stream enStream, Stream deStream, string postAct)
     {
+        string committedDesktopPath = null;
         ReceivedDestinationFile destinationFile = null;
         Stream m = null;
 
@@ -535,6 +536,11 @@ internal static class Clipboard
 
         void CommitDestinationFile(string sourcePath, string destinationPath)
         {
+            if (postAct.Equals("desktop", StringComparison.OrdinalIgnoreCase))
+            {
+                committedDesktopPath = Files.FileTransferWire.CommitWithoutOverwrite(sourcePath, Path.GetDirectoryName(destinationPath), Path.GetFileName(destinationPath));
+                return;
+            }
             bool success;
             if (Common.RunOnLogonDesktop || Common.RunOnScrSaverDesktop)
             {
@@ -789,6 +795,7 @@ internal static class Clipboard
                 if (destinationFile != null)
                 {
                     destinationFile.Complete();
+                    tempFile = committedDesktopPath ?? tempFile;
                 }
                 else
                 {

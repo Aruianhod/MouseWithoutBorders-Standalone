@@ -78,10 +78,10 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             try { return JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) ?? new T(); }
             catch (JsonException ex) { throw new IOException("Settings JSON is damaged. Restore settings.json.bak or reconfigure.", ex); }
         }
-        public void SaveSettings(string json, string module)
+        public void SaveSettings(string json, string module, string fileName = "settings.json")
         {
             Directory.CreateDirectory(root);
-            string file = GetSettingsFilePath(module);
+            string file = GetSettingsFilePath(module, fileName);
             // Atomic replacement prevents watchers and interrupted writes from seeing partial JSON.
             string temp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try

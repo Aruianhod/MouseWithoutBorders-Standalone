@@ -124,6 +124,14 @@ namespace MouseWithoutBorders
                 e.Effect = DragDropEffects.Copy;
                 Array ar = (string[])o;
 
+                if (ar.Length != 1 || Directory.Exists(ar.GetValue(0)?.ToString()))
+                {
+                    e.Effect = DragDropEffects.None;
+                    Hide();
+                    MessageBox.Show("跨屏拖拽一次支持一个文件。多个文件请使用托盘菜单“拖拽传文件”；文件夹请先压缩为 ZIP。", "无界鼠标文件传输");
+                    return;
+                }
+
                 if (ar.Length > 0)
                 {
                     string fileName = ar.GetValue(0).ToString();

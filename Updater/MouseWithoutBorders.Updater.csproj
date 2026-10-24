@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>false</UseWindowsForms>
+    <AssemblyName>MouseWithoutBorders.Updater</AssemblyName>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\UpdateCore\*.cs" Link="UpdateCore\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

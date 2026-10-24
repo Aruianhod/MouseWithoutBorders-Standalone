@@ -1,4 +1,15 @@
-# Standalone 0.102.2933.6 — experimental one-click audio setup
+# Standalone 0.102.2933.7 — shared-folder updates and file drop window
+
+- Add pinned RSA-signed LAN update feed, bounded downloads, ZIP and version validation,
+  separate self-contained updater, pre-exit readiness handshake, retained old directory,
+  and rollback on activation/launch-call failure. Auto-check only notifies; restart requires confirmation.
+- Keep update private key outside the source tree, encrypted for the build user's Windows account.
+- Add a multi-file drop window with cancellation, streaming SHA-256 verification and receiver
+  acknowledgement over the existing authenticated encrypted clipboard socket. Limit each file to 10 GiB.
+- Never overwrite received files; reject unsafe names and clean unfinished staging files.
+- Retain native cross-screen single-file dragging, correct pointer-sized window handles and
+  report unsupported multi-selection/folders instead of silently selecting the first file.
+- Physical two-computer update restart and file dragging remain unverified. Audio remains experimental.
 
 Based on Microsoft PowerToys release `v0.102.2933.0`, commit
 `9673c84ffac3bcc55e75fbecaedcda9e7d698530` (MIT licensed).

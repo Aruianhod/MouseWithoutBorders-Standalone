@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 Push-Location $PSScriptRoot
 try {
-    foreach ($project in @('App/MouseWithoutBorders.csproj', 'App/Helper/MouseWithoutBordersHelper.csproj')) {
+    foreach ($project in @('App/MouseWithoutBorders.csproj', 'App/Helper/MouseWithoutBordersHelper.csproj', 'Updater/MouseWithoutBorders.Updater.csproj')) {
         & $DotNet publish $project -c Release --self-contained true -p:RestoreLockedMode=true -o $Destination --nologo
         if ($LASTEXITCODE -ne 0) { throw "Publish failed: $project" }
     }

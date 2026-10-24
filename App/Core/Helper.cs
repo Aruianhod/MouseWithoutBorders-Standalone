@@ -309,7 +309,7 @@ internal static class Helper
 
         IntPtr h = (IntPtr)NativeMethods.FindWindow(null, Helper.HELPER_FORM_TEXT);
 
-        if (h.ToInt32() <= 0)
+        if (h == IntPtr.Zero)
         {
             _ = Launch.CreateProcessInInputDesktopSession(
                 $"\"{Path.GetDirectoryName(Application.ExecutablePath)}\\{HelperProcessName}.exe\"",
@@ -348,10 +348,10 @@ internal static class Helper
 
     internal static int SendMessageToHelper(int msg, IntPtr wparam, IntPtr lparam, bool wait = true, bool log = true)
     {
-        int h = NativeMethods.FindWindow(null, Helper.HELPER_FORM_TEXT);
+        IntPtr h = NativeMethods.FindWindow(null, Helper.HELPER_FORM_TEXT);
         int rv = -1;
 
-        if (h > 0)
+        if (h != IntPtr.Zero)
         {
             rv = wait
                 ? (int)NativeMethods.SendMessage((IntPtr)h, msg, wparam, lparam)

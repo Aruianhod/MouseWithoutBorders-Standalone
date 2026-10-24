@@ -22,4 +22,5 @@ internal enum ClipboardPostAction : uint
     Other = 0,
     Desktop = 1,
     Mspaint = 2,
+    FileInbox = 3,
 }
