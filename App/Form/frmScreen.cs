@@ -446,7 +446,6 @@ namespace MouseWithoutBorders
                         {
                             if (!Common.AtLeastOneSocketEstablished() || InitAndCleanup.PleaseReopenSocket == 10)
                             {
-                                Thread.Sleep(1000);
                                 if (InitAndCleanup.PleaseReopenSocket > 0)
                                 {
                                     InitAndCleanup.PleaseReopenSocket--;
@@ -475,7 +474,6 @@ namespace MouseWithoutBorders
                         else if (InitAndCleanup.PleaseReopenSocket == InitAndCleanup.REOPEN_WHEN_WSAECONNRESET)
                         {
                             InitAndCleanup.PleaseReopenSocket = 0;
-                            Thread.Sleep(1000);
                             MachineStuff.UpdateClientSockets("REOPEN_WHEN_WSAECONNRESET");
                         }
 
@@ -545,7 +543,7 @@ namespace MouseWithoutBorders
                     }
                 }
 
-                if (count == 20)
+                if (PeerConnection.RetryDue(count))
                 {
 #if SHOW_ON_WINLOGON
                     // if (Common.RunOnLogonDesktop) ShowMouseWithoutBordersUiOnWinLogonDesktop(false);

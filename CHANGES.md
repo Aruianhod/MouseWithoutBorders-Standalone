@@ -1,3 +1,23 @@
+# Standalone 0.102.2933.14 — faster connection establishment and recovery
+
+- Accept incoming sockets immediately using an endpoint display label. Use the existing
+  authenticated handshake for identity instead of blocking on reverse DNS before handshake.
+- Persist only successfully authenticated peer addresses, normalized and bound to the current
+  pairing-key fingerprint, with a 30-day expiry and a four-entry limit. No raw keys in this cache.
+- Prefer a verified outgoing address over later inbound addresses, which can be reachable
+  in only one direction (observed with inbound IPv6 replacing a working LAN IPv4 address).
+- Try the cached address before DNS; explicit mappings and reverse-lookup validation retain
+  their semantics. Continue bounded DNS resolution for changed DHCP addresses.
+- Drop cache hints that authenticate as another name or fail key validation without blocking
+  independent fresh DNS attempts. Never mark a cache hit as an authenticated connection.
+- Check missing outgoing connections every two seconds throughout runtime, replacing the old
+  one-shot post-startup check. Gate concurrent resolution and per-address workers.
+- Bound TCP attempts to three seconds, handshake reads to five seconds, cancel attempts when
+  sockets close, and dispose failed clients. Established sockets retain unlimited idle reads.
+- Remove arbitrary UI-thread reconnect sleeps; shorten audio's wait for the input connection.
+- Add real IPv4/mapped IPv4/IPv6 transport, deadline/cancellation, cache recovery/migration,
+  stale-address authentication failure, and repeated retry coverage.
+
 # Standalone 0.102.2933.13 — selectable secondary-PC playback
 
 - Add Both Computers / Headset Only to the secondary computer quick setup; old settings retain Both.

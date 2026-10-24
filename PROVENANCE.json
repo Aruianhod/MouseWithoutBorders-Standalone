@@ -2,7 +2,7 @@
   "upstream": "https://github.com/microsoft/PowerToys",
   "tag": "v0.102.2933.0",
   "commit": "9673c84ffac3bcc55e75fbecaedcda9e7d698530",
-  "standaloneVersion": "0.102.2933.13",
+  "standaloneVersion": "0.102.2933.14",
   "driverPackage": "original VB-CABLE Pack45; see Drivers/VB-CABLE-NOTICE.txt for separate license and hashes",
   "audioStatus": "experimental; .12 LAN audio streaming observed; .13 virtual playback requires remote hardware validation",
   "target": "win-x64",

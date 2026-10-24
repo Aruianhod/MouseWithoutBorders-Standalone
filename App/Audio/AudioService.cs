@@ -156,7 +156,7 @@ internal sealed class AudioService
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
             catch (Exception ex) { SetStatus(label, "等待 / 重试：" + FriendlyError(ex)); }
-            try { await Task.Delay(2500, token).ConfigureAwait(false); }
+            try { await Task.Delay(ConnectedAddress(route.Peer) == null ? 250 : 1000, token).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
         }
         SetStatus(label, "已停止");

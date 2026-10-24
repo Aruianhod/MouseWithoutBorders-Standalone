@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using MouseWithoutBorders.Core;
+using Microsoft.PowerToys.Settings.UI.Library;
 
 // <summary>
 //     Socket code.
@@ -78,6 +79,8 @@ namespace MouseWithoutBorders.Class
         }
 
         public bool IsClient { get; set; }
+
+        internal bool FromAddressCache { get; set; }
 
         public Socket BackingSocket { get; set; }
 
@@ -173,7 +176,9 @@ namespace MouseWithoutBorders.Class
         }
 
         private static bool firstRun;
-        private readonly long connectTimeout;
+        private readonly CancellationTokenSource connectionStop = new();
+        private readonly ConcurrentDictionary<string, byte> resolving = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, byte> connecting = new(StringComparer.OrdinalIgnoreCase);
         private static int restartCount;
 
         internal SocketStuff(int port, bool byUser)
@@ -273,7 +278,6 @@ namespace MouseWithoutBorders.Class
                 }
             }
 
-            connectTimeout = Common.GetTick() + (CONNECT_TIMEOUT / 2);
             Exception openSocketErr;
 
             /*
@@ -355,6 +359,7 @@ namespace MouseWithoutBorders.Class
 
         internal void Close(bool sentWait)
         {
+            connectionStop.Cancel();
             try
             {
                 if (!Common.RunOnScrSaverDesktop)
@@ -730,36 +735,9 @@ namespace MouseWithoutBorders.Class
             }
         }
 
-        private static string GetMachineNameFromSocket(Socket socket)
-        {
-            string stringIP = socket.RemoteEndPoint.ToString();
-            string name = null;
-
-            try
-            {
-                // Remote machine has IP changed, update it.
-                name = Dns.GetHostEntry((socket.RemoteEndPoint as IPEndPoint).Address).HostName;
-            }
-            catch (SocketException e)
-            {
-                Logger.Log($"{nameof(GetMachineNameFromSocket)}: {e.Message}");
-                return stringIP;
-            }
-
-            // Remove the domain part.
-            if (!string.IsNullOrEmpty(name))
-            {
-                int dotPos = name.IndexOf('.');
-
-                if (dotPos > 0)
-                {
-                    Logger.LogDebug("Removing domain part from the full machine name: {0}.", name);
-                    name = name[..dotPos];
-                }
-            }
-
-            return string.IsNullOrEmpty(name) ? stringIP : name;
-        }
+        // A name from reverse DNS is only a display hint. The authenticated handshake
+        // supplies the actual peer name; do not block accepting a LAN peer on PTR queries.
+        private static string GetMachineNameFromSocket(Socket socket) => PeerConnection.IncomingLabel(socket);
 
         private void AddSocket(Socket s)
         {
@@ -796,7 +774,7 @@ namespace MouseWithoutBorders.Class
 
         internal void UpdateTCPClients()
         {
-            if (InvalidKeyFound)
+            if (connectionStop.IsCancellationRequested || InvalidKeyFound)
             {
                 return;
             }
@@ -883,12 +861,16 @@ namespace MouseWithoutBorders.Class
 
         internal void StartNewTcpClient(string machineName)
         {
+            if (connectionStop.IsCancellationRequested || Common.IsConnectedByAClientSocketTo(machineName)
+                || !resolving.TryAdd(machineName, 0)) return;
             void ClientThread(object obj)
             {
                 // SuppressFlow fixes an issue on service mode, where the helper process can't get enough permissions to be started again.
                 // More details can be found on: https://github.com/microsoft/PowerToys/pull/36892
                 using var asyncFlowControl = ExecutionContext.SuppressFlow();
 
+                try
+                {
                 IPHostEntry host;
                 bool useName2IP = false;
                 List<IPAddress> validAddresses = new();
@@ -901,7 +883,7 @@ namespace MouseWithoutBorders.Class
 
                 Logger.LogDebug("Connecting to: " + machineName);
 
-                if (!string.IsNullOrEmpty(Setting.Values.Name2IP))
+                if (!string.IsNullOrEmpty(Setting.Values.Name2IP) || !string.IsNullOrEmpty(Setting.Values.Name2IpPolicyList))
                 {
                     string combinedName2ipList = Setting.Values.Name2IpPolicyList + Separator + Setting.Values.Name2IP;
                     string[] name2ip = combinedName2ipList.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
@@ -945,11 +927,22 @@ namespace MouseWithoutBorders.Class
                     }
                 }
 
+                // Explicit mappings retain priority; reverse-validation users retain their DNS checks.
+                if (!useName2IP && !Setting.Values.ReverseLookup)
+                {
+                    var cached = PeerAddressCache.Get(SettingsUtils.DataDirectory, machineName, Encryption.MyKey, DateTimeOffset.UtcNow);
+                    if (cached != null && CheckForSameSubNet(new() { cached }, machineName))
+                    {
+                        StartNewTcpClientThread(machineName, cached, fromCache: true);
+                        validAddressesSt += "[" + cached + "]";
+                        useName2IP = true; // Do not show a DNS warning while the verified address is available.
+                    }
+                }
                 try
                 {
-                    host = Dns.GetHostEntry(machineName);
+                    host = Dns.GetHostEntryAsync(machineName).WaitAsync(TimeSpan.FromSeconds(4), connectionStop.Token).GetAwaiter().GetResult();
                 }
-                catch (SocketException e)
+                catch (Exception e) when (e is SocketException or TimeoutException or OperationCanceledException)
                 {
                     host = null;
 
@@ -962,7 +955,7 @@ namespace MouseWithoutBorders.Class
 
                 UpdateTcpSockets(dummyTcp, SocketStatus.NA);
 
-                if (!MachineStuff.InMachineMatrix(machineName))
+                if (connectionStop.IsCancellationRequested || !MachineStuff.InMachineMatrix(machineName))
                 {
                     // While Resolving from name to IP, user may have changed the machine name and clicked on Apply.
                     return;
@@ -1006,7 +999,7 @@ namespace MouseWithoutBorders.Class
                             try
                             {
                                 // Reverse lookup to validate the IP Address.
-                                string hn = Dns.GetHostEntry(ip).HostName;
+                                string hn = Dns.GetHostEntryAsync(ip).WaitAsync(TimeSpan.FromSeconds(4), connectionStop.Token).GetAwaiter().GetResult().HostName;
 
                                 if (hn.StartsWith(machineName, StringComparison.CurrentCultureIgnoreCase) || hn.Equals(ip.ToString(), StringComparison.OrdinalIgnoreCase))
                                 {
@@ -1053,6 +1046,9 @@ namespace MouseWithoutBorders.Class
                         Common.ShowToolTip($"Cannot resolve IP Address of the remote machine: {machineName}.\r\nPlease fix your DNS or use the Mapping option in the Settings form.", 10000, ToolTipIcon.Warning, Setting.Values.ShowClipNetStatus);
                     }
                 }
+                }
+                catch (Exception e) { if (!connectionStop.IsCancellationRequested) Logger.Log("Peer resolution: " + e.Message); }
+                finally { resolving.TryRemove(machineName, out _); }
             }
 
             Thread t = new(
@@ -1126,8 +1122,11 @@ namespace MouseWithoutBorders.Class
             }
         }
 
-        private void StartNewTcpClientThread(string machineName, IPAddress ip)
+        private void StartNewTcpClientThread(string machineName, IPAddress ip, bool fromCache = false)
         {
+            ip = PeerAddressCache.Normalize(ip);
+            string attemptKey = machineName + "|" + ip;
+            if (connectionStop.IsCancellationRequested || !connecting.TryAdd(attemptKey, 0)) return;
             void NewTcpClient()
             {
                 // SuppressFlow fixes an issue on service mode, where the helper process can't get enough permissions to be started again.
@@ -1135,11 +1134,12 @@ namespace MouseWithoutBorders.Class
                 using var asyncFlowControl = ExecutionContext.SuppressFlow();
 
                 TcpClient tcpClient = null;
+                TcpSk tcp = null;
 
                 try
                 {
-                    tcpClient = new TcpClient(AddressFamily.InterNetworkV6);
-                    tcpClient.Client.DualMode = true;
+                    if (connectionStop.IsCancellationRequested || !MachineStuff.InMachineMatrix(machineName)) return;
+                    tcpClient = new TcpClient(ip.AddressFamily);
 
                     if (Common.IsConnectedByAClientSocketTo(machineName))
                     {
@@ -1153,53 +1153,24 @@ namespace MouseWithoutBorders.Class
                         return;
                     }
 
-                    TcpSk tcp = AddTcpSocket(true, tcpClient.Client, SocketStatus.Connecting, machineName, ip);
+                    tcp = AddTcpSocket(true, tcpClient.Client, SocketStatus.Connecting, machineName, ip);
+                    tcp.FromAddressCache = fromCache;
 
                     // Update the other server socket's machine name based on this corresponding client socket.
                     UpdateTcpSockets(tcp, SocketStatus.Connecting);
 
                     Logger.LogDebug(string.Format(CultureInfo.CurrentCulture, "=====> Connecting to: {0}:{1}", machineName, ip.ToString()));
 
-                    long timeoutLeft;
-
-                    do
+                    try
                     {
-                        try
-                        {
-                            tcpClient.Connect(ip, TcpPort + 1);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // When user reconnects.
-                            Logger.LogDebug($"tcpClient.Connect: The socket has already been disposed: {machineName}:{ip}");
-                            return;
-                        }
-                        catch (SocketException e)
-                        {
-                            timeoutLeft = connectTimeout - Common.GetTick();
-
-                            if (timeoutLeft > 0)
-                            {
-                                Logger.LogDebug($"tcpClient.Connect: {timeoutLeft}: {e.Message}");
-                                Thread.Sleep(1000);
-                                continue;
-                            }
-                            else
-                            {
-                                Logger.Log($"tcpClient.Connect: Unable to connect after a timeout: {machineName}:{ip} : {e.Message}");
-
-                                string message = $"Connection timed out: {machineName}:{ip}";
-
-                                Common.ShowToolTip(message, 5000, ToolTipIcon.Warning, Setting.Values.ShowClipNetStatus);
-
-                                UpdateTcpSockets(tcp, SocketStatus.Timeout);
-                                return;
-                            }
-                        }
-
-                        break;
+                        PeerConnection.ConnectAsync(tcpClient.Client, ip, TcpPort + 1, connectionStop.Token).GetAwaiter().GetResult();
                     }
-                    while (true);
+                    catch (Exception e) when (e is SocketException or TimeoutException or OperationCanceledException)
+                    {
+                        UpdateTcpSockets(tcp, SocketStatus.Timeout);
+                        Logger.LogDebug("Bounded peer connection: " + machineName + ": " + e.Message);
+                        return;
+                    }
 
                     Logger.LogDebug($"=====> Connected: {tcpClient.Client.LocalEndPoint} => {machineName}: {ip}");
 
@@ -1227,6 +1198,12 @@ namespace MouseWithoutBorders.Class
                 catch (Exception e)
                 {
                     Logger.Log(e);
+                }
+                finally
+                {
+                    if (tcp != null) UpdateTcpSockets(tcp, SocketStatus.ForceClosed);
+                    tcpClient?.Dispose();
+                    connecting.TryRemove(attemptKey, out _);
                 }
             }
 
@@ -1284,6 +1261,7 @@ namespace MouseWithoutBorders.Class
                 currentSocket.ReceiveBufferSize = Package.PACKAGE_SIZE * 10000;
                 currentSocket.NoDelay = true; // This is very interesting to know:(
                 currentSocket.SendTimeout = 500;
+                currentSocket.ReceiveTimeout = PeerConnection.HandshakeReadTimeoutMilliseconds;
                 d.MachineName = Common.MachineName;
 
                 d.Type = PackageType.Handshake;
@@ -1410,6 +1388,12 @@ namespace MouseWithoutBorders.Class
                                    package.Machine3 == d.Machine3 && package.Machine4 == d.Machine4)
                                 {
                                     string claimedMachineName = package.MachineName;
+                                    if (currentTcp.FromAddressCache && !string.Equals(machineName, claimedMachineName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        PeerAddressCache.Forget(SettingsUtils.DataDirectory, machineName, currentTcp.Address);
+                                        UpdateTcpSockets(currentTcp, SocketStatus.ForceClosed);
+                                        return;
+                                    }
 
                                     if (!remoteMachine.Equals(claimedMachineName, StringComparison.Ordinal))
                                     {
@@ -1436,6 +1420,7 @@ namespace MouseWithoutBorders.Class
                                         return;
                                     }
 
+                                    currentSocket.ReceiveTimeout = 0; // Established idle connections must not time out.
                                     packageCount = -1; // Trusted
                                     InvalidKeyFound = false;
                                     currentTcp.MachineId = (uint)remoteID;
@@ -1475,6 +1460,9 @@ namespace MouseWithoutBorders.Class
                                     }
 
                                     MachineStuff.RememberAuthenticatedConnection(remoteMachine, remoteID);
+                                    if (currentSocket.RemoteEndPoint is IPEndPoint verifiedPeer)
+                                        PeerAddressCache.Remember(SettingsUtils.DataDirectory, remoteMachine, Encryption.MyKey, verifiedPeer.Address, DateTimeOffset.UtcNow, isClient);
+                                    Logger.Log($"Peer authenticated: {remoteMachine}; {(isClient ? "outgoing" : "incoming")}; {Common.GetTick() - currentTcp.BirthTime} ms; cached={currentTcp.FromAddressCache}");
 
                                     if (!isClient)
                                     {
@@ -1972,6 +1960,13 @@ namespace MouseWithoutBorders.Class
 
         private void UpdateTcpSockets(TcpSk tcp, SocketStatus status)
         {
+            if (status == SocketStatus.InvalidKey && tcp.FromAddressCache)
+            {
+                // DHCP can give an old address to a different machine. Reject this hint,
+                // but let independent DNS attempts continue through normal authentication.
+                PeerAddressCache.Forget(SettingsUtils.DataDirectory, tcp.MachineName, tcp.Address);
+                status = SocketStatus.Timeout;
+            }
             if (status == SocketStatus.InvalidKey)
             {
                 InvalidKeyFound = true;
