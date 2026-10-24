@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -14,6 +14,63 @@ public sealed class AudioLatencyTests
         var bytes = new byte[48 * channels * 4 * milliseconds];
         for (int i = 0; i < bytes.Length; i += 4) BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(i), value);
         return bytes;
+    }
+
+    [TestMethod]
+    public void StableModeRetainsExistingPlaybackAndBufferBehavior()
+    {
+        var buffer = AudioLatency.CreateBuffer(2, false, 160);
+        var input = Pcm(2, 10, .4f); var output = new byte[input.Length];
+        buffer.Add(input); buffer.Read(output, 0, output.Length);
+        CollectionAssert.AreEqual(input, output);
+        Assert.AreEqual(0, buffer.TargetMilliseconds);
+        Assert.AreEqual(100, AudioLatency.PlaybackMilliseconds(false, 160));
+    }
+
+    [TestMethod]
+    [DataRow(1)]
+    [DataRow(2)]
+    public void AdaptiveBufferAbsorbsBunchedWifiFramesAndReprimesAfterAnUnderrun(int channels)
+    {
+        var buffer = AudioLatency.CreateBuffer(channels, true, 160);
+        var frame = Pcm(channels, 10, .4f); var output = new byte[frame.Length];
+        buffer.Add(frame); buffer.Read(output, 0, output.Length);
+        Assert.IsTrue(output.All(b => b == 0)); Assert.AreEqual(frame.Length, buffer.BufferedBytes);
+        for (int i = 0; i < 3; i++) buffer.Add(frame);
+        buffer.Read(output, 0, output.Length);
+        Assert.IsTrue(output.Any(b => b != 0));
+        // Three packets arrive together every 30 ms: steady audio after initial priming.
+        for (int cycle = 0; cycle < 100; cycle++)
+        {
+            for (int i = 0; i < 3; i++) buffer.Read(output, 0, output.Length);
+            for (int i = 0; i < 3; i++) buffer.Add(frame);
+        }
+        Assert.AreEqual(0L, buffer.Underruns); Assert.AreEqual(0L, buffer.DroppedBytes);
+        for (int i = 0; i < 20; i++) buffer.Read(output, 0, output.Length);
+        Assert.AreEqual(1L, buffer.Underruns); Assert.AreEqual(60, buffer.TargetMilliseconds);
+        for (int i = 0; i < 5; i++) { buffer.Add(frame); buffer.Read(output, 0, output.Length); Assert.IsTrue(output.All(b => b == 0)); }
+        buffer.Add(frame); buffer.Read(output, 0, output.Length); Assert.IsTrue(output.Any(b => b != 0));
+        for (int cycle = 0; cycle < 10; cycle++)
+        {
+            for (int i = 0; i < 50; i++) buffer.Read(output, 0, output.Length);
+            buffer.Add(Pcm(channels, 150, .5f));
+            buffer.Read(output, 0, output.Length);
+        }
+        Assert.AreEqual(100, buffer.TargetMilliseconds);
+        Assert.IsTrue(buffer.BufferedBytes <= 48 * channels * 4 * 160);
+    }
+
+    [TestMethod]
+    public void PrebufferWaitDoesNotCountAsUnderrunsAndOverflowRetainsAdaptiveCushion()
+    {
+        var buffer = AudioLatency.CreateBuffer(2, true, 160); var output = new byte[48 * 2 * 4 * 20];
+        for (int i = 0; i < 100; i++) buffer.Read(output, 0, output.Length);
+        Assert.AreEqual(0L, buffer.Underruns);
+        buffer.Add(Pcm(2, 300, .7f));
+        Assert.AreEqual(48 * 2 * 4 * 60, buffer.BufferedBytes);
+        buffer.Read(output, 0, output.Length);
+        Assert.AreEqual(0L, buffer.Underruns);
+        Assert.AreEqual(40, AudioLatency.PlaybackMilliseconds(true, 160));
     }
 
     [TestMethod]
@@ -37,7 +94,7 @@ public sealed class AudioLatencyTests
         var input = Enumerable.Range(1, 10).SelectMany(i => Pcm(channels, 10, i / 10f)).ToArray();
         queue.Add(input, input.Length, 50);
         queue.Complete();
-        for (int i = 7; i <= 10; i++)
+        for (int i = 1; i <= 10; i++)
         {
             var frame = await queue.ReadAsync(CancellationToken.None);
             Assert.AreEqual(48 * channels * 4 * 10, frame.Length);
@@ -53,7 +110,7 @@ public sealed class AudioLatencyTests
         var queue = new AudioFrameQueue(1, true, () => now);
         var old = Pcm(1, 10, .1f);
         queue.Add(old, old.Length, 100);
-        now += 100;
+        now += 250;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var pending = queue.ReadAsync(timeout.Token).AsTask();
         Assert.IsFalse(pending.IsCompleted);

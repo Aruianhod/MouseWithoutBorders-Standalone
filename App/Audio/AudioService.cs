@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -108,6 +108,23 @@ internal sealed class AudioService
         return null;
     }
 
+    internal static bool ConnectedAddressMatches(string name, IPAddress address)
+    {
+        if (address == null || Common.Sk == null) return false;
+        var sockets = Common.Sk;
+        lock (sockets.TcpSocketsLock)
+            foreach (var tcp in sockets.TcpSockets ?? Enumerable.Empty<TcpSk>())
+            {
+                if (tcp.Status != SocketStatus.Connected || !string.Equals(tcp.MachineName, name, StringComparison.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    if (tcp.BackingSocket?.RemoteEndPoint is IPEndPoint endpoint && address.MapToIPv6().Equals(endpoint.Address.MapToIPv6())) return true;
+                }
+                catch (Exception ex) when (ex is ObjectDisposedException or SocketException) { }
+            }
+        return false;
+    }
+
     private static void RequireConnection(string peer, string key)
     {
         if (ConnectedAddress(peer) == null || !string.Equals(key, Encryption.MyKey, StringComparison.Ordinal))
@@ -121,7 +138,7 @@ internal sealed class AudioService
         // with WSAEADDRNOTAVAIL (10049). Use a native IPv4 socket for mapped addresses;
         // leave real IPv6 addresses, including their scope IDs, unchanged.
         if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
-        var client = new TcpClient(address.AddressFamily) { NoDelay = true };
+        var client = new TcpClient(address.AddressFamily) { NoDelay = true, SendBufferSize = 32768, ReceiveBufferSize = 65536 };
         try
         {
             await client.ConnectAsync(address, port, token).ConfigureAwait(false);
@@ -232,6 +249,7 @@ internal sealed class AudioService
                     connections.RemoveAll(t => t.IsCompleted);
                     if (connections.Count >= 8) { client.Dispose(); continue; }
                     client.NoDelay = true;
+                    client.SendBufferSize = 32768; client.ReceiveBufferSize = 65536;
                     connections.Add(ReceiveConnection(client, certificate, settings, sessions.Token));
                 }
             }
@@ -266,7 +284,7 @@ internal sealed class AudioService
                     var route = settings.Receive(hello.Kind);
                     return route.Enabled && string.Equals(hello.Sender, route.Peer, StringComparison.OrdinalIgnoreCase)
                         && string.Equals(hello.Receiver, Common.MachineName, StringComparison.OrdinalIgnoreCase)
-                        && remoteAddress.Equals(ConnectedAddress(hello.Sender)?.MapToIPv6());
+                        && ConnectedAddressMatches(hello.Sender, remoteAddress);
                 }, handshake.Token).ConfigureAwait(false);
                 if (Interlocked.CompareExchange(ref receiving[(int)hello.Kind], 1, 0) != 0)
                     throw new IOException("此音频通道已有连接。");
@@ -292,8 +310,7 @@ internal sealed class AudioService
         int channels = hello.Kind == AudioKind.System ? 2 : 1;
         using var device = AudioDevices.Open(route.DeviceId, DataFlow.Render);
         AudioDevices.CheckFeedback(settings, device.ID);
-        int queueLimit = AudioLatency.QueueMilliseconds(settings.LowLatency, settings.BufferMilliseconds);
-        var buffer = new LiveAudioBuffer(channels, queueLimit, settings.LowLatency ? 20 : queueLimit);
+        var buffer = AudioLatency.CreateBuffer(channels, settings.LowLatency, settings.BufferMilliseconds);
         int playbackMilliseconds = AudioLatency.PlaybackMilliseconds(settings.LowLatency, settings.BufferMilliseconds);
         using var playback = new WasapiOut(device, AudioClientShareMode.Shared, true, playbackMilliseconds);
         using var playbackLife = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -306,8 +323,9 @@ internal sealed class AudioService
             await tls.WriteAsync(new byte[] { 1 }, readyTimeout.Token).ConfigureAwait(false);
         }
         playback.Play();
-        SetStatus(Label(false, hello.Kind), "正在接收 " + hello.Sender + " · " + device.FriendlyName + (settings.LowLatency ? " · 低延迟" : " · 稳定缓冲"));
-        long nextCheck = 0;
+        string receivingStatus = "正在接收 " + hello.Sender + " · " + device.FriendlyName + (settings.LowLatency ? " · 自适应低延迟" : " · 稳定缓冲");
+        SetStatus(Label(false, hello.Kind), receivingStatus);
+        long nextCheck = 0, nextDiagnostic = 0;
         try
         {
             while (!token.IsCancellationRequested)
@@ -324,6 +342,11 @@ internal sealed class AudioService
                 byte[] frame = await AudioWire.ReadPacket(tls, AudioWire.MaxFrame, frameTimeout.Token).ConfigureAwait(false);
                 AudioWire.ScaleSamples(frame, channels, route.Volume);
                 if (frame.Length > 0) buffer.Add(frame);
+                if (settings.LowLatency && Environment.TickCount64 >= nextDiagnostic)
+                {
+                    SetStatus(Label(false, hello.Kind), receivingStatus + $" · 预缓冲 {buffer.TargetMilliseconds}ms · 欠载 {buffer.Underruns} 次 · 追赶丢弃 {buffer.DroppedBytes * 1000 / buffer.WaveFormat.AverageBytesPerSecond}ms");
+                    nextDiagnostic = Environment.TickCount64 + 5000;
+                }
             }
         }
         catch (OperationCanceledException) when (playbackFailure != null) { throw new IOException("播放设备中断。", playbackFailure); }

@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Buffers.Binary;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -22,8 +23,13 @@ internal static class AudioLatency
             AudioClientStreamFlags.Loopback | base.GetAudioClientStreamFlags();
     }
 
-    internal static int PlaybackMilliseconds(bool lowLatency, int limit) => lowLatency ? 20 : Math.Min(limit, 100);
-    internal static int QueueMilliseconds(bool lowLatency, int limit) => lowLatency ? Math.Min(limit, 60) : limit;
+    internal static int PlaybackMilliseconds(bool lowLatency, int limit) => lowLatency ? 40 : Math.Min(limit, 100);
+    internal static int QueueMilliseconds(bool lowLatency, int limit) => lowLatency ? 160 : limit;
+    internal static LiveAudioBuffer CreateBuffer(int channels, bool lowLatency, int limit)
+    {
+        if (!lowLatency) return new(channels, limit, limit);
+        return new(channels, QueueMilliseconds(true, limit), 60, 40, 100);
+    }
 }
 
 // Timestamped bounded queue: a network stall must not replay old speech on recovery.
@@ -40,8 +46,8 @@ internal sealed class AudioFrameQueue
         this.channels = channels;
         this.clock = clock ?? (() => Environment.TickCount64);
         frameMilliseconds = lowLatency ? 10 : 20;
-        maxAge = lowLatency ? 60 : 250;
-        queue = Channel.CreateBounded<(byte[], long)>(new BoundedChannelOptions(lowLatency ? 4 : 10)
+        maxAge = lowLatency ? 160 : 250;
+        queue = Channel.CreateBounded<(byte[], long)>(new BoundedChannelOptions(lowLatency ? 12 : 10)
         {
             SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.DropOldest,
         });
@@ -85,15 +91,29 @@ internal sealed class LiveAudioBuffer : IWaveProvider
     private readonly int maximumBytes;
     private readonly int catchUpBytes;
     private long droppedBytes;
+    private long underruns;
+    private int targetBytes;
+    private readonly int maximumTargetBytes;
+    private bool priming;
+    private bool fadeIn;
+    private readonly bool adaptive;
+    internal int TargetMilliseconds { get { lock (gate) return targetBytes * 1000 / WaveFormat.AverageBytesPerSecond; } }
+    internal long Underruns { get { lock (gate) return underruns; } }
     public WaveFormat WaveFormat => buffer.WaveFormat;
     internal int BufferedBytes { get { lock (gate) return buffer.BufferedBytes; } }
     internal long DroppedBytes { get { lock (gate) return droppedBytes; } }
 
-    internal LiveAudioBuffer(int channels, int maximumMilliseconds, int catchUpMilliseconds)
+    internal LiveAudioBuffer(int channels, int maximumMilliseconds, int catchUpMilliseconds, int initialMilliseconds = 0, int maximumTargetMilliseconds = 0)
     {
         if (channels is not (1 or 2) || maximumMilliseconds < 20 || maximumMilliseconds > 500
             || catchUpMilliseconds < 10 || catchUpMilliseconds > maximumMilliseconds) throw new ArgumentOutOfRangeException();
         var format = WaveFormat.CreateIeeeFloatWaveFormat(48000, channels);
+        if (initialMilliseconds < 0 || maximumTargetMilliseconds < initialMilliseconds || maximumTargetMilliseconds > maximumMilliseconds)
+            throw new ArgumentOutOfRangeException(nameof(initialMilliseconds));
+        adaptive = initialMilliseconds > 0;
+        priming = adaptive; fadeIn = adaptive;
+        targetBytes = format.AverageBytesPerSecond * initialMilliseconds / 1000;
+        maximumTargetBytes = format.AverageBytesPerSecond * maximumTargetMilliseconds / 1000;
         maximumBytes = format.AverageBytesPerSecond * maximumMilliseconds / 1000;
         catchUpBytes = format.AverageBytesPerSecond * catchUpMilliseconds / 1000;
         buffer = new BufferedWaveProvider(format) { BufferLength = maximumBytes, ReadFully = true };
@@ -108,7 +128,9 @@ internal sealed class LiveAudioBuffer : IWaveProvider
             int offset = 0;
             if ((long)buffer.BufferedBytes + frame.Length > maximumBytes)
             {
-                int toDrop = buffer.BufferedBytes + frame.Length - catchUpBytes;
+                int keep = adaptive ? Math.Max(catchUpBytes, targetBytes) : catchUpBytes;
+                int toDrop = buffer.BufferedBytes + frame.Length - keep;
+                if (adaptive) fadeIn = true;
                 int old = Math.Min(buffer.BufferedBytes, toDrop);
                 if (old > 0) buffer.Read(discarded, 0, old);
                 offset = toDrop - old;
@@ -121,6 +143,43 @@ internal sealed class LiveAudioBuffer : IWaveProvider
     public int Read(byte[] destination, int offset, int count)
     {
         if (count % WaveFormat.BlockAlign != 0) throw new ArgumentException("播放读取未对齐。");
-        lock (gate) return buffer.Read(destination, offset, count);
+        lock (gate)
+        {
+            if (adaptive && count > 0)
+                targetBytes = Math.Min(maximumTargetBytes, Math.Max(targetBytes, count + WaveFormat.AverageBytesPerSecond * 20 / 1000));
+            if (adaptive && priming)
+            {
+                if (buffer.BufferedBytes < Math.Max(targetBytes, count))
+                { Array.Clear(destination, offset, count); return count; }
+                priming = false; fadeIn = true;
+            }
+            int available = Math.Min(count, buffer.BufferedBytes);
+            int result = buffer.Read(destination, offset, count);
+            if (adaptive && available > 0 && fadeIn)
+            { Fade(destination, offset, available, true); fadeIn = false; }
+            if (adaptive && available < count)
+            {
+                if (available > 0) Fade(destination, offset, available, false);
+                underruns++;
+                targetBytes = Math.Min(maximumTargetBytes, targetBytes + WaveFormat.AverageBytesPerSecond * 20 / 1000);
+                priming = true;
+            }
+            return result;
+        }
     }
+    private void Fade(byte[] data, int offset, int available, bool rising)
+    {
+        int frames = Math.Min(240, available / WaveFormat.BlockAlign);
+        int start = rising ? offset : offset + available - frames * WaveFormat.BlockAlign;
+        for (int frame = 0; frame < frames; frame++)
+        {
+            float gain = rising ? (frame + 1f) / frames : (frames - frame - 1f) / frames;
+            for (int channel = 0; channel < WaveFormat.Channels; channel++)
+            {
+                var sample = data.AsSpan(start + frame * WaveFormat.BlockAlign + channel * 4, 4);
+                BinaryPrimitives.WriteSingleLittleEndian(sample, BinaryPrimitives.ReadSingleLittleEndian(sample) * gain);
+            }
+        }
+    }
+
 }

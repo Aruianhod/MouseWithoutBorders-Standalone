@@ -113,7 +113,6 @@ internal static class Clipboard
             IsClipboardDataImage = false;
             LastClipboardData = null;
             LastDragDropFile = null;
-            GC.Collect();
 
             string stringData = null;
             byte[] byteData = null;

@@ -94,6 +94,23 @@ namespace MouseWithoutBorders.Class
 
         public IPAddress Address { get; set; }
 
+        internal readonly object WriteGate = new();
+        private readonly object writerGate = new();
+        private OrderedPacketWriter writer;
+        internal void QueuePacket(DATA data, byte[] bytes)
+        {
+            lock (writerGate)
+            {
+                writer ??= new OrderedPacketWriter(payload => SocketStuff.SendQueuedPacket(this, payload), error =>
+                {
+                    Status = SocketStatus.SendError;
+                    try { BackingSocket?.Close(); } catch { }
+                    Logger.Log("Input send recovery: " + MachineName + ": " + error.Message);
+                });
+                writer.Enqueue(data, bytes);
+            }
+        }
+
         private Stream encryptedStream;
         private Stream decryptedStream;
         private Stream socketStream;
@@ -141,6 +158,7 @@ namespace MouseWithoutBorders.Class
 
         public void Dispose()
         {
+            lock (writerGate) writer?.Dispose();
             encryptedStream?.Dispose();
 
             decryptedStream?.Dispose();
@@ -499,6 +517,11 @@ namespace MouseWithoutBorders.Class
             return null;
         }
 
+        internal static int SendQueuedPacket(TcpSk tcp, byte[] bytes)
+        {
+            lock (tcp.WriteGate) return TcpSendData(tcp, bytes);
+        }
+
         private static int TcpSendData(TcpSk tcp, byte[] bytes)
         {
             Stream encryptedStream = tcp.EncryptedStream;
@@ -674,7 +697,12 @@ namespace MouseWithoutBorders.Class
             }
 
             byte[] dataAsBytes = data.Bytes;
-            int rv = TcpSendData(tcp, dataAsBytes);
+            if (tcp.Status == SocketStatus.Connected && data.Type is not PackageType.Handshake and not PackageType.HandshakeAck)
+            {
+                tcp.QueuePacket(data, dataAsBytes);
+                return dataAsBytes.Length;
+            }
+            int rv = SendQueuedPacket(tcp, dataAsBytes);
             if (rv < dataAsBytes.Length)
             {
                 Logger.Log("TcpSend error! Length of sent data is unexpected.");
@@ -1257,8 +1285,8 @@ namespace MouseWithoutBorders.Class
 
             try
             {
-                currentSocket.SendBufferSize = Package.PACKAGE_SIZE * 10000;
-                currentSocket.ReceiveBufferSize = Package.PACKAGE_SIZE * 10000;
+                currentSocket.SendBufferSize = 8192; // Bound stale input hidden in the kernel during a Wi-Fi stall.
+                currentSocket.ReceiveBufferSize = 65536;
                 currentSocket.NoDelay = true; // This is very interesting to know:(
                 currentSocket.SendTimeout = 500;
                 currentSocket.ReceiveTimeout = PeerConnection.HandshakeReadTimeoutMilliseconds;

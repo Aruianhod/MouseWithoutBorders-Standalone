@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -114,11 +114,6 @@ internal static class Event
                 }
 
                 Common.SkSend(MousePackage, null, false);
-
-                if (MousePackage.Md.dwFlags is WM.WM_LBUTTONUP or WM.WM_RBUTTONUP)
-                {
-                    Thread.Sleep(10);
-                }
 
                 NativeMethods.GetCursorPos(ref actualLastPos);
 

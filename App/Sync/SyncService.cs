@@ -26,6 +26,7 @@ internal static class SyncService
     private static SyncState state;
     private static CancellationTokenSource stop;
     private static Control ui;
+    private static readonly ConcurrentDictionary<string, (SyncRevision Revision, long At)> delivered = new(StringComparer.OrdinalIgnoreCase);
     internal static string Status => string.Join(Environment.NewLine, peerStatus.OrderBy(p => p.Key).Select(p => p.Key + "：" + p.Value));
     private static string StatePath => Path.Combine(SettingsUtils.DataDirectory, "sync.json");
     private static void Save()
@@ -136,8 +137,13 @@ internal static class SyncService
                     foreach (string peer in ConnectedPeers())
                     {
                         if (!capable.TryGetValue(peer, out long seen) || Environment.TickCount64 - seen > 20000)
-                        { Report(peer, "等待对面更新到支持设置同步的版本（.16 或更新）"); continue; }
-                        try { var reply = await Send(peer, document, token); Report(peer, reply.Message); }
+                        { delivered.TryRemove(peer, out _); Report(peer, "等待对面更新到支持设置同步的版本（.16 或更新）"); continue; }
+                        if (delivered.TryGetValue(peer, out var last) && last.Revision == document.Revision && Environment.TickCount64 - last.At < 30000) continue;
+                        try
+                        {
+                            var reply = await Send(peer, document, token); Report(peer, reply.Message);
+                            if (reply.Applied && reply.Message == "设置已同步") delivered[peer] = (document.Revision, Environment.TickCount64);
+                        }
                         catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
                         catch (Exception ex) { Report(peer, "稍后重试：" + ex.Message); }
                     }

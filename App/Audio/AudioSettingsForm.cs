@@ -16,7 +16,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
     private readonly RouteEditor receiveMicrophone;
     private readonly NumericUpDown port = new() { Minimum = 1024, Maximum = 65535, Width = 90 };
     private readonly NumericUpDown buffer = new() { Minimum = 60, Maximum = 500, Increment = 20, Width = 80 };
-    private readonly CheckBox lowLatency = new() { Text = "低延迟（局域网推荐；声音断续时可关闭）", AutoSize = true };
+    private readonly CheckBox lowLatency = new() { Text = "自适应低延迟（自动增加抗抖动缓冲）", AutoSize = true };
     private readonly TextBox state = new() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
     private readonly Button apply = new() { Text = "保存并应用", AutoSize = true };
     private readonly Button stop = new() { Text = "停止全部音频共享", AutoSize = true };

@@ -16,6 +16,36 @@ public sealed class AudioTests
     private const string PairingKey = "AudioFixturePairingCode2026";
 
     [TestMethod]
+    public async Task AudioAcceptsEitherAuthenticatedAddressButRejectsOtherPeersAndDisconnectedSockets()
+    {
+        var previous = MouseWithoutBorders.Core.Common.Sk;
+        var v4 = new TcpListener(IPAddress.Loopback, 0); var v6 = new TcpListener(IPAddress.IPv6Loopback, 0);
+        v4.Start(); v6.Start();
+        try
+        {
+            using var c4 = new TcpClient(AddressFamily.InterNetwork); using var c6 = new TcpClient(AddressFamily.InterNetworkV6);
+            var a4 = v4.AcceptTcpClientAsync(); var a6 = v6.AcceptTcpClientAsync();
+            await c4.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)v4.LocalEndpoint).Port);
+            await c6.ConnectAsync(IPAddress.IPv6Loopback, ((IPEndPoint)v6.LocalEndpoint).Port);
+            using var s4 = await a4; using var s6 = await a6;
+            var tcp4 = new MouseWithoutBorders.Class.TcpSk(true, c4.Client, MouseWithoutBorders.Class.SocketStatus.Connected, "PEER");
+            var tcp6 = new MouseWithoutBorders.Class.TcpSk(false, c6.Client, MouseWithoutBorders.Class.SocketStatus.Connected, "PEER");
+            var sockets = (MouseWithoutBorders.Class.SocketStuff)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(MouseWithoutBorders.Class.SocketStuff));
+            sockets.TcpSocketsLock = new();
+            typeof(MouseWithoutBorders.Class.SocketStuff).GetProperty("TcpSockets", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .SetValue(sockets, new List<MouseWithoutBorders.Class.TcpSk> { tcp4, tcp6 });
+            MouseWithoutBorders.Core.Common.Sk = sockets;
+            Assert.IsTrue(AudioService.ConnectedAddressMatches("peer", IPAddress.IPv6Loopback));
+            Assert.IsTrue(AudioService.ConnectedAddressMatches("peer", IPAddress.Parse("::ffff:127.0.0.1")));
+            Assert.IsFalse(AudioService.ConnectedAddressMatches("OTHER", IPAddress.Loopback));
+            Assert.IsFalse(AudioService.ConnectedAddressMatches("peer", IPAddress.Parse("192.0.2.10")));
+            tcp6.Status = MouseWithoutBorders.Class.SocketStatus.Error;
+            Assert.IsFalse(AudioService.ConnectedAddressMatches("peer", IPAddress.IPv6Loopback));
+        }
+        finally { MouseWithoutBorders.Core.Common.Sk = previous; v4.Stop(); v6.Stop(); }
+    }
+
+    [TestMethod]
     public void AudioWindowRefreshesSynchronizedOptionsButPreservesUnsavedLocalEdits()
     {
         Exception failure = null;

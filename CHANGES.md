@@ -1,4 +1,16 @@
-﻿# Standalone 0.102.2933.16 — bidirectional settings and clipboard reliability
+﻿# Standalone 0.102.2933.17 — jitter-tolerant low-latency audio and nonblocking input
+
+- Prime low-latency audio before consuming it, adapt from 40 ms up to 100 ms for actual render block sizes and underruns, and request a 40 ms shared WASAPI render buffer.
+- Keep a bounded 160 ms receive queue and retain the adaptive cushion on catch-up; fade only rebuffer/trim boundaries. Report target, underruns and discarded duration as local diagnostics, not network packet-loss measurements.
+- Allow twelve 10 ms capture frames and 160 ms age before dropping stale samples. Bound audio TCP buffers while preserving authenticated TLS wire compatibility.
+- Preserve the existing stable-mode behavior and saved mode selection.
+- Move established-connection writes to a bounded ordered per-socket worker; merge only adjacent absolute mouse moves for the same sender/target. Keep keys, buttons, relative movement and clipboard frames in order.
+- Bound input socket send buffers, serialize handshake writes with queued stream writes, remove callback button-up sleep and explicit clipboard GC, and recover through the existing connection lifecycle on write failure.
+- Accept an audio peer address only if it matches any currently authenticated input connection of that same peer; retain pairing-key and receiver-route validation.
+- Suppress redundant acknowledged settings snapshots for 30 seconds, while new revisions and failed/pending applications retry normally.
+- Add underrun, jitter batching, stable-mode, input ordering/coalescing/blockage/failure and dual-address admission regressions.
+
+# Standalone 0.102.2933.16 — bidirectional settings and clipboard reliability
 
 - Synchronize saved common settings and complementary audio routes between authenticated paired peers. Either computer can publish edits; no fixed primary.
 - Persist a logical revision counter and deterministic tie-break identity, observe pending local edits before applying remote state, and avoid republishing received snapshots as edits.
