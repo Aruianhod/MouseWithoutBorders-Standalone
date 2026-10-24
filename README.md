@@ -1,6 +1,6 @@
 # 无界鼠标独立版 / Mouse Without Borders Standalone
 
-基于 Microsoft PowerToys Mouse Without Borders 的 Windows x64 独立构建。当前快照：**0.102.2933.2 · 中文界面**。这是个人维护的衍生项目，不是 Microsoft 官方发行版。
+基于 Microsoft PowerToys Mouse Without Borders 的 Windows x64 独立构建。当前快照：**0.102.2933.3 · 自定义配对码**。这是个人维护的衍生项目，不是 Microsoft 官方发行版。
 
 ## 下载和使用
 
@@ -8,7 +8,7 @@
 
 两端先完成鼠标配对与电脑排列，再配置需要的剪贴板、文件和音频功能。详细步骤见 [中文说明](README-zh-CN.txt)。默认管理员启动从 .9 引入，登录自启动从 .10 引入，需要时仍遵循 Windows 授权流程；不提供 UAC 安全桌面控制。
 
-当前版本变更：将设置及常用提示改为中文。
+当前版本变更：增加自定义配对码入口和兼容处理。
 
 ## 公开版本与历史
 

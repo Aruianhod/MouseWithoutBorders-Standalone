@@ -1,4 +1,4 @@
-# Standalone 0.102.2933.2
+# Standalone 0.102.2933.3
 
 Based on Microsoft PowerToys release `v0.102.2933.0`, commit
 `9673c84ffac3bcc55e75fbecaedcda9e7d698530` (MIT licensed).
@@ -36,3 +36,10 @@ One upstream test of private .NET implementation details is intentionally ignore
 Physical two-computer and multi-monitor validation remains outstanding.
 
 Chinese edition: localize the pairing wizard, settings, tray menus, connection status and common dialogs. Draw Chinese captions for the wizard image buttons; preserve stored Easy Mouse enum values. Persist changes made in Other Options immediately. Verified Chinese layout and option persistence in the running final build.
+
+Custom pairing-code edition: make the first-computer code editable with explicit Save;
+accept custom codes of at least 16 non-whitespace characters, retaining the existing
+encrypted transport. Apply the same save path to settings and peer setup, preserve
+case-only edits, and prevent the legacy generated-key flag from rejecting a validated
+custom code. Increase input fields to 256 characters. Add persistence/reload,
+invalid-input and case-change regression coverage.

@@ -15,6 +15,47 @@ public sealed class StandaloneTests
     public sealed class EchoService { public string Echo(string value) => value; }
 
     [TestMethod]
+    public void CustomPairingCodePreservesCaseAndReloadsWithoutAcceptingInvalidChanges()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "MWB-Standalone-Test-" + Guid.NewGuid());
+        string oldKey = Encryption.MyKey;
+        uint oldHash = Encryption.MagicNumber;
+        bool oldGenerated = Encryption.GeneratedKey;
+        bool oldCorrupted = Encryption.KeyCorrupted;
+        try
+        {
+            var disk = new SettingsUtils(root);
+            var settings = new Class.Settings(disk, new MouseWithoutBordersSettings(), new PassthroughPairingKeyCodec());
+            Assert.IsTrue(PairingKeyEditor.TrySave(settings, "River Paper Lantern 2026", out _));
+            Assert.AreEqual("RiverPaperLantern2026", Encryption.MyKey);
+            Assert.IsTrue(PairingKeyEditor.TrySave(settings, "riverPaperLantern2026", out _));
+            Assert.AreEqual("riverPaperLantern2026", Encryption.MyKey);
+            Assert.IsTrue(Encryption.GeneratedKey);
+            Assert.AreEqual(Encryption.Get24BitHash(Encryption.MyKey), Encryption.MagicNumber);
+            string persisted = File.ReadAllText(Path.Combine(root, "settings.json"));
+            foreach (string invalid in new[] { "short", "                ", "mwb-dpapi:v1:AQID" })
+            {
+                Assert.IsFalse(PairingKeyEditor.TrySave(settings, invalid, out var error));
+                Assert.IsFalse(string.IsNullOrEmpty(error));
+                Assert.AreEqual("riverPaperLantern2026", Encryption.MyKey);
+                Assert.AreEqual(persisted, File.ReadAllText(Path.Combine(root, "settings.json")));
+            }
+
+            var stored = disk.GetSettingsOrDefault<MouseWithoutBordersSettings>(MouseWithoutBordersSettings.ModuleName);
+            var reloaded = new Class.Settings(disk, stored, new PassthroughPairingKeyCodec());
+            Assert.AreEqual("riverPaperLantern2026", reloaded.MyKey);
+        }
+        finally
+        {
+            Encryption.MyKey = oldKey;
+            Encryption.MagicNumber = oldHash;
+            Encryption.GeneratedKey = oldGenerated;
+            Encryption.KeyCorrupted = oldCorrupted;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
     public void WizardStartsWithFirstComputerChoiceOnNormalDesktop()
     {
         Exception? failure = null;

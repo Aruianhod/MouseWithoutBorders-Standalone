@@ -504,20 +504,11 @@ namespace MouseWithoutBorders
 
         private bool UpdateKey(string newKey)
         {
-            if (!Encryption.IsKeyValid(newKey, out string rv))
+            if (!PairingKeyEditor.TrySave(Setting.Values, newKey, out string rv))
             {
                 ShowKeyErrorMsg(rv);
                 return false;
             }
-
-            if (!newKey.Equals(Encryption.MyKey, StringComparison.OrdinalIgnoreCase))
-            {
-                Setting.Values.MyKey = newKey;
-                Encryption.MyKey = newKey;
-                Encryption.GeneratedKey = false;
-            }
-
-            Encryption.MagicNumber = Encryption.Get24BitHash(Encryption.MyKey);
             return true;
         }
 

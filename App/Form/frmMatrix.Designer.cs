@@ -551,7 +551,7 @@ namespace MouseWithoutBorders
             this.groupBoxKeySetup.Size = new System.Drawing.Size(558, 66);
             this.groupBoxKeySetup.TabIndex = 0;
             this.groupBoxKeySetup.TabStop = false;
-            this.groupBoxKeySetup.Text = "共享配对码";
+            this.groupBoxKeySetup.Text = "配对码（可直接修改，点击“应用”保存）";
             this.toolTip.SetToolTip(this.groupBoxKeySetup, "两台电脑使用相同配对码，加密传输键鼠和剪贴板数据。");
             // 
             // buttonNewKey
@@ -567,12 +567,12 @@ namespace MouseWithoutBorders
             // textBoxEnc
             // 
             this.textBoxEnc.Location = new System.Drawing.Point(86, 19);
-            this.textBoxEnc.MaxLength = 22;
+            this.textBoxEnc.MaxLength = 256;
             this.textBoxEnc.Name = "textBoxEnc";
             this.textBoxEnc.PasswordChar = '*';
             this.textBoxEnc.Size = new System.Drawing.Size(304, 20);
             this.textBoxEnc.TabIndex = 3;
-            this.toolTip.SetToolTip(this.textBoxEnc, "在一台电脑生成配对码，并在另一台电脑输入相同内容。");
+            this.toolTip.SetToolTip(this.textBoxEnc, "可自行修改，至少 16 个非空白字符；区分大小写。修改后点击“应用”，并在另一台电脑输入相同内容。");
             // 
             // LabelEnc
             // 

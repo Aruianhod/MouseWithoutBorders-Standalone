@@ -88,19 +88,14 @@ namespace MouseWithoutBorders
         private void LinkButtonClick(object sender, System.EventArgs e)
         {
             var key = Regex.Replace(SecurityCodeField.Text, @"\s+", string.Empty);
-            if (!Encryption.IsKeyValid(key, out string error))
+            if (!PairingKeyEditor.TrySave(Setting.Values, key, out string error))
             {
                 Common.ShowToolTip(error, 10000, System.Windows.Forms.ToolTipIcon.Error, false);
                 _ = SecurityCodeField.Focus();
                 return;
             }
 
-            if (GetSecureKey() != SecurityCodeField.Text)
-            {
-                Setting.Values.MyKey = key;
-                Encryption.MyKey = key;
-                SecurityCode = Encryption.MyKey;
-            }
+            SecurityCode = Encryption.MyKey;
 
             MachineStuff.MachineMatrix = new string[MachineStuff.MAX_MACHINE] { ComputerNameField.Text.Trim().ToUpper(CultureInfo.CurrentCulture), Common.MachineName.Trim(), string.Empty, string.Empty };
 

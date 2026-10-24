@@ -64,7 +64,7 @@ namespace MouseWithoutBorders
             this.SecurityCodeField.Font = new System.Drawing.Font(Control.DefaultFont.Name, 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.SecurityCodeField.Location = new System.Drawing.Point(80, 226);
             this.SecurityCodeField.Margin = new System.Windows.Forms.Padding(0);
-            this.SecurityCodeField.MaximumLength = 22;
+            this.SecurityCodeField.MaximumLength = 256;
             this.SecurityCodeField.Name = "SecurityCodeField";
             this.SecurityCodeField.Size = new System.Drawing.Size(300, 30);
             this.SecurityCodeField.TabIndex = 0;
