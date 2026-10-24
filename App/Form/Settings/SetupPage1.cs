@@ -14,7 +14,7 @@ namespace MouseWithoutBorders
         {
             InitializeComponent();
 
-            MachineStuff.ClearComputerMatrix();
+            // Opening the wizard must not erase computers remembered from earlier connections.
         }
 
         private void NoButtonClick(object sender, EventArgs e)

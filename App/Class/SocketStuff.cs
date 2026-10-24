@@ -1474,6 +1474,8 @@ namespace MouseWithoutBorders.Class
                                         }
                                     }
 
+                                    MachineStuff.RememberAuthenticatedConnection(remoteMachine, remoteID);
+
                                     if (!isClient)
                                     {
                                         MachineStuff.UpdateClientSockets("MainTCPRoutine");

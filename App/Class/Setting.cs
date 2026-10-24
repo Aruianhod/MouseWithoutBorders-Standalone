@@ -179,6 +179,36 @@ namespace MouseWithoutBorders.Class
                 _settings.Save(_settingsUtils);
             }
         }
+
+        // Called only after the TCP challenge has authenticated the remote computer.
+        // Commit on both inbound and outbound connections, without waiting for the wizard.
+        internal bool RememberAuthenticatedPeer(string localName, string peerName, string machinePool)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(localName);
+            ArgumentException.ThrowIfNullOrWhiteSpace(peerName);
+            if (string.Equals(localName, peerName, StringComparison.OrdinalIgnoreCase)) return false;
+
+            lock (_loadingSettingsLock)
+            {
+                var layout = _properties.MachineMatrixString.Take(MachineStuff.MAX_MACHINE).ToList();
+                while (layout.Count < MachineStuff.MAX_MACHINE) layout.Add(string.Empty);
+                bool layoutChanged = false;
+                foreach (string name in new[] { localName.Trim(), peerName.Trim() })
+                {
+                    if (layout.Any(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase))) continue;
+                    int slot = layout.FindIndex(string.IsNullOrWhiteSpace);
+                    if (slot < 0) continue;
+                    layout[slot] = name;
+                    layoutChanged = true;
+                }
+
+                _properties.MachineMatrixString = layout;
+                _properties.MachinePool.Value = machinePool;
+                _properties.FirstRun = false;
+                SaveSettings();
+                return layoutChanged;
+            }
+        }
         internal Settings(IPairingKeyCodec pairingKeyCodec)
         {
             ArgumentNullException.ThrowIfNull(pairingKeyCodec);
@@ -287,7 +317,11 @@ namespace MouseWithoutBorders.Class
 
                 lock (_loadingSettingsLock)
                 {
-                    _properties.ShareClipboard = value;
+                    if (_properties.ShareClipboard != value)
+                    {
+                        _properties.ShareClipboard = value;
+                        if (!PauseInstantSaving) SaveSettings();
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-# Standalone 0.102.2933.3
+# Standalone 0.102.2933.4
 
 Based on Microsoft PowerToys release `v0.102.2933.0`, commit
 `9673c84ffac3bcc55e75fbecaedcda9e7d698530` (MIT licensed).
@@ -43,3 +43,14 @@ encrypted transport. Apply the same save path to settings and peer setup, preser
 case-only edits, and prevent the legacy generated-key flag from rejecting a validated
 custom code. Increase input fields to 256 characters. Add persistence/reload,
 invalid-input and case-change regression coverage.
+
+Connection-memory edition (0.102.2933.4): persist authenticated peer names, IDs,
+layout and first-run completion on both inbound and outbound connections, without
+waiting for the user to finish the wizard. Preserve existing pairing codes and
+computer arrangements when reopening setup. Existing saved names drive the upstream
+automatic reconnect loop. Clipboard text/image sharing remains enabled by default;
+persist its toggle immediately while respecting existing opt-out and organization policy.
+Regression coverage includes first-run key reuse, both connection directions,
+layout preservation, clipboard preferences, and Unicode text/PNG bytes across the
+real helper IPC transport, including cancellation and reconnection. No physical
+two-computer clipboard or automatic reconnect test was performed for this build.

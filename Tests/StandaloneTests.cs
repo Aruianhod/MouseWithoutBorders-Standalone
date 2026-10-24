@@ -12,7 +12,11 @@ namespace MouseWithoutBorders.UnitTests;
 [DoNotParallelize]
 public sealed class StandaloneTests
 {
-    public sealed class EchoService { public string Echo(string value) => value; }
+    public sealed class EchoService
+    {
+        public string Echo(string value) => value;
+        public ByteArrayOrString EchoClipboard(ByteArrayOrString value) => value;
+    }
 
     [TestMethod]
     public void CustomPairingCodePreservesCaseAndReloadsWithoutAcceptingInvalidChanges()
@@ -44,6 +48,10 @@ public sealed class StandaloneTests
             var stored = disk.GetSettingsOrDefault<MouseWithoutBordersSettings>(MouseWithoutBordersSettings.ModuleName);
             var reloaded = new Class.Settings(disk, stored, new PassthroughPairingKeyCodec());
             Assert.AreEqual("riverPaperLantern2026", reloaded.MyKey);
+            PairingKeyEditor.EnsureExistingOrNewKey(reloaded);
+            PairingKeyEditor.EnsureExistingOrNewKey(reloaded);
+            Assert.AreEqual("riverPaperLantern2026", reloaded.MyKey, "Reopening setup must retain the remembered code, including its case.");
+            Assert.AreEqual("riverPaperLantern2026", Encryption.MyKey);
         }
         finally
         {
@@ -56,19 +64,124 @@ public sealed class StandaloneTests
     }
 
     [TestMethod]
+    public void FirstSetupGeneratesCodeOnlyOnce()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "MWB-Standalone-Test-" + Guid.NewGuid());
+        string oldKey = Encryption.MyKey;
+        uint oldHash = Encryption.MagicNumber;
+        bool oldGenerated = Encryption.GeneratedKey;
+        bool oldCorrupted = Encryption.KeyCorrupted;
+        try
+        {
+            var disk = new SettingsUtils(root);
+            var settings = new Class.Settings(disk, new MouseWithoutBordersSettings(), new PassthroughPairingKeyCodec());
+            PairingKeyEditor.EnsureExistingOrNewKey(settings);
+            string generated = settings.MyKey;
+            Assert.IsTrue(Encryption.IsKeyValid(generated, out _));
+            var reloaded = new Class.Settings(disk, disk.GetSettingsOrDefault<MouseWithoutBordersSettings>(MouseWithoutBordersSettings.ModuleName), new PassthroughPairingKeyCodec());
+            PairingKeyEditor.EnsureExistingOrNewKey(reloaded);
+            Assert.AreEqual(generated, reloaded.MyKey);
+        }
+        finally
+        {
+            Encryption.MyKey = oldKey;
+            Encryption.MagicNumber = oldHash;
+            Encryption.GeneratedKey = oldGenerated;
+            Encryption.KeyCorrupted = oldCorrupted;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("PC-A", "PC-B", "PC-A,PC-B,,", "PC-A:123,PC-B:456,:,:")]
+    [DataRow("PC-B", "PC-A", "PC-B,PC-A,,", "PC-B:456,PC-A:123,:,:")]
+    public void AuthenticatedConnectionPersistsWithoutCompletingWizard(string local, string peer, string layout, string pool)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "MWB-Standalone-Test-" + Guid.NewGuid());
+        try
+        {
+            var disk = new SettingsUtils(root);
+            var settings = new Class.Settings(disk, new MouseWithoutBordersSettings(), new PassthroughPairingKeyCodec());
+            settings.MyKey = "RememberThisPairingKey2026";
+            Assert.IsTrue(settings.FirstRun);
+            Assert.IsTrue(settings.RememberAuthenticatedPeer(local, peer, pool));
+            // No wizard completion and no explicit SaveSettings: reconnect data must already be on disk.
+            var reloaded = new Class.Settings(disk, disk.GetSettingsOrDefault<MouseWithoutBordersSettings>(MouseWithoutBordersSettings.ModuleName), new PassthroughPairingKeyCodec());
+            Assert.IsFalse(reloaded.FirstRun);
+            Assert.AreEqual(layout, reloaded.MachineMatrixString);
+            Assert.AreEqual(pool, reloaded.MachinePoolString);
+            Assert.AreEqual("RememberThisPairingKey2026", reloaded.MyKey);
+            Assert.IsFalse(reloaded.RememberAuthenticatedPeer(local.ToLowerInvariant(), peer.ToLowerInvariant(), pool));
+            Assert.AreEqual(layout, reloaded.MachineMatrixString, "Reconnect must not duplicate or reorder existing computers.");
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [TestMethod]
+    public void RememberedConnectionKeepsUserArrangementAndOtherComputers()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "MWB-Standalone-Test-" + Guid.NewGuid());
+        try
+        {
+            var disk = new SettingsUtils(root);
+            var settings = new Class.Settings(disk, new MouseWithoutBordersSettings(), new PassthroughPairingKeyCodec());
+            settings.MachineMatrixString = "OTHER,REMOTE,,LOCAL";
+            Assert.IsFalse(settings.RememberAuthenticatedPeer("LOCAL", "REMOTE", "LOCAL:1,REMOTE:2,OTHER:3,:"));
+            Assert.AreEqual("OTHER,REMOTE,,LOCAL", settings.MachineMatrixString);
+            Assert.IsTrue(settings.RememberAuthenticatedPeer("LOCAL", "NEW", "LOCAL:1,REMOTE:2,OTHER:3,NEW:4"));
+            Assert.AreEqual("OTHER,REMOTE,NEW,LOCAL", settings.MachineMatrixString);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [TestMethod]
+    public void ClipboardSharingDefaultsOnAndRemembersOptOutAndOptInImmediately()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "MWB-Standalone-Test-" + Guid.NewGuid());
+        try
+        {
+            var disk = new SettingsUtils(root);
+            var settings = new Class.Settings(disk, new MouseWithoutBordersSettings(), new PassthroughPairingKeyCodec());
+            Assert.IsTrue(settings.ShareClipboard);
+            settings.ShareClipboard = false;
+            var reloaded = new Class.Settings(disk, disk.GetSettingsOrDefault<MouseWithoutBordersSettings>(MouseWithoutBordersSettings.ModuleName), new PassthroughPairingKeyCodec());
+            Assert.IsFalse(reloaded.ShareClipboard);
+            reloaded.ShareClipboard = true;
+            Assert.IsTrue(disk.GetSettingsOrDefault<MouseWithoutBordersSettings>(MouseWithoutBordersSettings.ModuleName).Properties.ShareClipboard);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [TestMethod]
     public void WizardStartsWithFirstComputerChoiceOnNormalDesktop()
     {
         Exception? failure = null;
         var thread = new System.Threading.Thread(() =>
         {
+            string root = Path.Combine(Path.GetTempPath(), "MWB-Standalone-Test-" + Guid.NewGuid());
+            var previousSettings = Setting.Values;
+            bool previousNoAdmin = Common.RunWithNoAdminRight;
+            string previousName = Common.MachineName;
             try
             {
+                Setting.Values = new Class.Settings(new SettingsUtils(root), new MouseWithoutBordersSettings(), new PassthroughPairingKeyCodec());
+                Setting.Values.MachineMatrixString = "REMOTE,TEST-PC,,";
+                MachineStuff.MachineMatrix = null;
                 Common.RunWithNoAdminRight = true;
                 Common.MachineName = "TEST-PC";
                 using var form = new SettingsForm();
                 Assert.IsInstanceOfType<SetupPage1>(form.GetCurrentPage());
+                Assert.AreEqual("REMOTE,TEST-PC,,", Setting.Values.MachineMatrixString, "Opening setup must retain remembered computers and their order.");
             }
             catch (Exception ex) { failure = ex; }
+            finally
+            {
+                Setting.Values = previousSettings;
+                MachineStuff.MachineMatrix = null;
+                Common.RunWithNoAdminRight = previousNoAdmin;
+                Common.MachineName = previousName;
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
@@ -88,6 +201,14 @@ public sealed class StandaloneTests
             await client.ConnectAsync(5000);
             using var rpc = StreamJsonRpc.JsonRpc.Attach(client);
             Assert.AreEqual("hello", await rpc.InvokeAsync<string>("Echo", "hello").WaitAsync(TimeSpan.FromSeconds(5)));
+            string text = "跨电脑剪贴板\r\n第二行：你好 🌏\tCaseSensitive";
+            var textResult = await rpc.InvokeAsync<ByteArrayOrString>("EchoClipboard", new ByteArrayOrString(text)).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsTrue(textResult.IsString);
+            Assert.AreEqual(text, textResult.GetString());
+            byte[] png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8l8AAAAASUVORK5CYII=");
+            var imageResult = await rpc.InvokeAsync<ByteArrayOrString>("EchoClipboard", new ByteArrayOrString(png)).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsTrue(imageResult.IsByteArray);
+            CollectionAssert.AreEqual(png, imageResult.GetByteArray());
             cancellation.Cancel();
             // Cancellation must also break an already-connected RPC wait.
             try { await rpc.Completion.WaitAsync(TimeSpan.FromSeconds(5)); }

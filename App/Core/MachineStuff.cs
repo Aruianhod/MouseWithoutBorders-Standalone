@@ -792,10 +792,7 @@ internal static class MachineStuff
     internal static void ShowSetupForm(bool reopenSockets = false)
     {
         Logger.LogDebug("========== BEGIN THE SETUP EXPERIENCE ==========", true);
-        var key = Encryption.CreateRandomKey();
-        Setting.Values.MyKey = key;
-        Encryption.MyKey = key;
-        Encryption.GeneratedKey = true;
+        PairingKeyEditor.EnsureExistingOrNewKey(Setting.Values);
 
         if (Process.GetCurrentProcess().SessionId != NativeMethods.WTSGetActiveConsoleSessionId())
         {
@@ -948,6 +945,16 @@ internal static class MachineStuff
     internal static void UpdateMachinePoolStringSetting()
     {
         Setting.Values.MachinePoolString = MachineStuff.MachinePool.SerializedAsString();
+    }
+
+    internal static void RememberAuthenticatedConnection(string remoteName, ID remoteId)
+    {
+        _ = MachinePool.LearnMachine(remoteName);
+        _ = MachinePool.TryUpdateMachineID(remoteName, remoteId, true);
+        if (Setting.Values.RememberAuthenticatedPeer(Common.MachineName, remoteName, MachinePool.SerializedAsString()))
+        {
+            MachineMatrix = null; // Reload the remembered layout without changing its order.
+        }
     }
 
     internal static void SendMachineMatrix()
