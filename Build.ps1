@@ -9,4 +9,5 @@ try {
     }
     Copy-Item LICENSE,UPSTREAM-NOTICE.md,CHANGES.md,PROVENANCE.json,*.txt $Destination
     Copy-Item THIRD-PARTY-LICENSES $Destination -Recurse -Force
+    Copy-Item Drivers $Destination -Recurse -Force
 } finally { Pop-Location }

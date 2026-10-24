@@ -1,0 +1,25 @@
+VB-CABLE by VB-Audio Software / Vincent Burel
+Origin and download: https://vb-audio.com/Cable/ (www.vb-cable.com)
+Licensing and distribution terms: https://vb-audio.com/Services/licensing.htm
+Donation / license purchase: https://shop.vb-audio.com/
+
+VB-CABLE is donationware; contributions are welcome. It is a separately licensed,
+proprietary third-party driver, not part of the MIT-licensed standalone application.
+The original, unmodified base VB-CABLE archive is included. No paid A+B or C+D
+package is included. Read the original readme.txt inside the archive before installing.
+Professional/institutional distribution where end users cannot identify or support
+VB-CABLE may require licenses; consult the vendor's current terms.
+
+Archive: VBCABLE_Driver_Pack45.zip (official October 2024 base package)
+Downloaded from: https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip
+SHA-256: B950E39F01AF1D04EA623C8F6D8EB9B6EA5C477C637295FABF20631C85116BFB
+Installer: VBCABLE_Setup_x64.exe
+SHA-256: 734C35DFA6D98F48782A451633CEB471166EC70D60482FD89A1123D0EE3C4F41
+Build-time Windows Authenticode verification: Valid (2026-10-24).
+Signer: BUREL VINCENT Entrepreneur individuel.
+
+This app checks the pinned archive and installer hashes before requesting Windows
+elevation. Only the vendor installer is elevated. The installer remains visible if
+it needs a response. Windows/UAC/driver prompts are never bypassed. No trust-store
+certificate is installed by our app. Device detection, not exit code alone, determines
+whether routing can continue. The official installer was NOT executed during tests.

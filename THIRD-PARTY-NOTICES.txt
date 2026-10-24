@@ -1,5 +1,8 @@
 Third-party dependencies for Mouse Without Borders Standalone.
 PowerToys source: MIT, see LICENSE and UPSTREAM-NOTICE.md.
+VB-CABLE base Pack45: separately licensed proprietary donationware by VB-Audio.
+Original package, origin, donation/license links and hashes: Drivers/VB-CABLE-NOTICE.txt.
+VB-CABLE is not covered by the application's MIT license.
 Build-time-only analyzers may appear in this list.
 NAudio.Wasapi/2.2.1 | License: MIT | https://www.nuget.org/packages/NAudio.Wasapi/2.2.1
 NAudio.Core/2.2.1 | License: MIT | https://www.nuget.org/packages/NAudio.Core/2.2.1

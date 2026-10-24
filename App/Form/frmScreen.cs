@@ -73,6 +73,7 @@ namespace MouseWithoutBorders
         internal FrmScreen()
         {
             InitializeComponent();
+            MainMenu.Items.Insert(0, new ToolStripMenuItem("一键配置耳机与麦克风…", null, (_, _) => Audio.AudioQuickSetupForm.ShowForCurrentComputer()));
             MainMenu.Items.Insert(0, new ToolStripMenuItem("声音与麦克风共享…", null, (_, _) =>
             {
                 using var audioSettings = new Audio.AudioSettingsForm();

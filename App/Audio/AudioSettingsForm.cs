@@ -19,6 +19,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
     private readonly Button apply = new() { Text = "保存并应用", AutoSize = true };
     private readonly Button stop = new() { Text = "停止全部音频共享", AutoSize = true };
     private readonly Button refresh = new() { Text = "刷新设备", AutoSize = true };
+    private readonly Button quick = new() { Text = "一键配置…", AutoSize = true };
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
     private bool applying;
 
@@ -66,11 +67,21 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         actions.Controls.Add(apply);
         actions.Controls.Add(stop);
         actions.Controls.Add(refresh);
+        actions.Controls.Add(quick);
         root.Controls.Add(actions, 0, 4);
         Controls.Add(root);
         apply.Click += async (_, _) => await Save(false);
         stop.Click += async (_, _) => await Save(true);
         refresh.Click += (_, _) => RefreshDevices();
+        quick.Click += (_, _) =>
+        {
+            AudioQuickSetupForm.ShowForCurrentComputer(this);
+            var updated = AudioService.Instance.Options;
+            sendSystem.LoadRoute(updated.SendSystem); receiveSystem.LoadRoute(updated.ReceiveSystem);
+            sendMicrophone.LoadRoute(updated.SendMicrophone); receiveMicrophone.LoadRoute(updated.ReceiveMicrophone);
+            port.Value = updated.Port; buffer.Value = updated.BufferMilliseconds;
+            RefreshDevices();
+        };
         timer.Tick += (_, _) => { if (!applying) state.Text = AudioService.Instance.Status; };
         Shown += (_, _) =>
         {
@@ -100,11 +111,12 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         try
         {
             applying = true;
-            apply.Enabled = stop.Enabled = refresh.Enabled = false;
+            apply.Enabled = stop.Enabled = refresh.Enabled = quick.Enabled = false;
             var value = ReadOptions();
             if (disable)
             {
                 AudioService.Instance.Stop();
+                AudioQuickSetup.CancelPending();
                 // Emergency stop also works while other unsaved fields are invalid.
                 value = AudioService.Instance.Options;
                 foreach (var route in new[] { value.SendSystem, value.SendMicrophone, value.ReceiveSystem, value.ReceiveMicrophone }) route.Enabled = false;
@@ -133,7 +145,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
             state.Text = AudioService.Instance.Status;
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "无法应用音频设置", MessageBoxButtons.OK, MessageBoxIcon.Information); }
-        finally { applying = false; apply.Enabled = stop.Enabled = refresh.Enabled = true; }
+        finally { applying = false; apply.Enabled = stop.Enabled = refresh.Enabled = quick.Enabled = true; }
     }
 
     private static void AddTab(TabControl tabs, string name, RouteEditor send, RouteEditor receive, string note)
@@ -189,6 +201,16 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
             Enabled = EnabledChoice.Checked, Peer = peer.Text.Trim(),
             DeviceId = (device.SelectedItem as AudioDeviceChoice)?.Id ?? "", Volume = (int)volume.Value,
         };
+
+        internal void LoadRoute(AudioRoute value)
+        {
+            EnabledChoice.Checked = value.Enabled;
+            peer.Text = value.Peer;
+            volume.Value = value.Volume;
+            device.Items.Clear();
+            device.Items.Add(new AudioDeviceChoice(value.DeviceId, "已自动选择"));
+            device.SelectedIndex = 0;
+        }
 
         internal void RefreshDevices()
         {

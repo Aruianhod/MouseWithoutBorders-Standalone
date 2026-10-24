@@ -257,6 +257,7 @@ namespace MouseWithoutBorders.Class
 
                 var formScreen = new FrmScreen();
                 Audio.AudioService.Instance.Start();
+                formScreen.Shown += (_, _) => formScreen.BeginInvoke(new Action(() => Audio.AudioQuickSetupForm.ResumePending(formScreen)));
                 try { Application.Run(formScreen); }
                 finally { Audio.AudioService.Instance.Stop(); }
 

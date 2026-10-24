@@ -1,4 +1,4 @@
-# Standalone 0.102.2933.5 — experimental audio extension
+# Standalone 0.102.2933.6 — experimental one-click audio setup
 
 Based on Microsoft PowerToys release `v0.102.2933.0`, commit
 `9673c84ffac3bcc55e75fbecaedcda9e7d698530` (MIT licensed).
@@ -75,3 +75,17 @@ requires a temporary user-scoped certificate key container (not EphemeralKeySet)
 No user audio was recorded during verification; synthetic PCM tests use real local
 TCP/TLS. Physical audio capture/playback, driver routing, latency, and two-computer
 operation remain unverified. This is an experimental feature, not production audio QA.
+
+One-click audio setup (0.102.2933.6): choose a paired peer and headset/remote role to
+configure complementary audio routes. Detect the base VB-CABLE pair; if missing,
+verify and extract the bundled original Pack45 and invoke its signed installer with
+Windows elevation. Keep vendor/system prompts visible. Persist defaults and route
+backups before installation; if endpoints are not ready, persist a pending plan and
+register a one-time current-user startup to resume after reboot. Do not reboot,
+uninstall existing drivers, install trust-store certificates or change firewall rules.
+Offer switching all capture-default roles to the remote microphone and restoring
+prior settings while preserving subsequent manual device changes. Default switching
+uses the internal Windows PolicyConfig COM interface and verifies results. The
+interface's availability was tested; actual default switching and driver installation
+were deliberately not executed. VB-CABLE remains under its separate donationware
+license; see the origin, licensing and support links in the UI and Drivers notice.
