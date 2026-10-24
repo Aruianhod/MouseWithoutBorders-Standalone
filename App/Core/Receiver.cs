@@ -92,6 +92,10 @@ internal static class Receiver
 
         switch (package.Type)
         {
+            case PackageType.SettingsCapability:
+                Sync.SyncService.OnCapabilities(package, tcp);
+                break;
+
             case PackageType.Keyboard:
                 Package.PackageReceived.Keyboard++;
                 if (package.Des == Common.MachineID || package.Des == ID.ALL)

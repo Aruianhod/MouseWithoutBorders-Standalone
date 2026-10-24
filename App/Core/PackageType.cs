@@ -41,6 +41,7 @@ internal enum PackageType // : int
     MachineSwitched = 77,
     ClipboardAsk = 78,
     ClipboardPush = 79,
+    SettingsCapability = 80,
 
     NextMachine = 121,
     Keyboard = 122,

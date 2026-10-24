@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -32,28 +32,26 @@ WellKnownSidType.AuthenticatedUserSid, null);
             _ = Task.Run(
                 async () =>
                 {
-                    try
+                    while (!cancellationToken.IsCancellationRequested)
                     {
-                        while (!cancellationToken.IsCancellationRequested)
+                        try
                         {
-                            using (var serverChannel = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly))
-                            {
-                                await serverChannel.WaitForConnectionAsync(cancellationToken);
-                                using var taskRpc = JsonRpc.Attach(serverChannel, new T());
-                                await taskRpc.Completion.WaitAsync(cancellationToken);
-                            }
+                            using var serverChannel = new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+                                PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                            await serverChannel.WaitForConnectionAsync(cancellationToken);
+                            using var taskRpc = JsonRpc.Attach(serverChannel, new T());
+                            await taskRpc.Completion.WaitAsync(cancellationToken);
                         }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-                    catch (Exception e)
-                    {
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
+                        catch (Exception e)
+                        {
 #if MM_HELPER
-                        _ = e;
+                            _ = e;
 #else
-                        Logger.Log(e);
+                            Logger.Log(e);
 #endif
+                            try { await Task.Delay(250, cancellationToken); } catch (OperationCanceledException) { break; }
+                        }
                     }
                 },
                 cancellationToken);

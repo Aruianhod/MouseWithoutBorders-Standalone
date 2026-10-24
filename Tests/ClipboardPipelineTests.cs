@@ -38,22 +38,32 @@ public sealed class ClipboardPipelineTests
             var received = Task.Run(() =>
             {
                 using var bytes = new MemoryStream();
-                for (int i = 0; i < 2000; i++)
+                var frames = new List<byte[]>();
+                for (int i = 0; i < 10000; i++)
                 {
                     var packet = SocketStuff.TcpReceiveData(receiver, out _);
-                    if (packet.Type == PackageType.ClipboardDataEnd) return bytes.ToArray();
+                    if (packet.Type == PackageType.ClipboardDataEnd)
+                    {
+                        frames.Add(bytes.ToArray()); bytes.SetLength(0);
+                        if (frames.Count == 12) return frames;
+                        continue;
+                    }
                     Assert.AreEqual(PackageType.ClipboardText, packet.Type);
                     bytes.Write(packet.Bytes, 16, 48);
                 }
                 throw new IOException("Clipboard end marker never arrived.");
             });
-            await Task.Delay(1100);
             const string text = "TXT跨电脑复制测试🌏CaseSensitive{4CFF57F7-BEDD-43d5-AE8F-27A61E886F2F}";
-            Assert.IsTrue(Clip.CheckClipboardEx(new ByteArrayOrString(text), false));
-            using var compressed = new MemoryStream(await received.WaitAsync(TimeSpan.FromSeconds(8)));
-            using var inflate = new DeflateStream(compressed, CompressionMode.Decompress);
-            using var decoded = new MemoryStream(); inflate.CopyTo(decoded);
-            Assert.AreEqual(text, System.Text.Encoding.Unicode.GetString(decoded.ToArray()));
+            var expected = Enumerable.Range(0, 12).Select(i => text + i + (i % 2 == 0 ? "Case" : "case") + new string('x', 2000)).ToArray();
+            foreach (var value in expected) Assert.IsTrue(Clip.CheckClipboardEx(new ByteArrayOrString(value), false));
+            var frames = await received.WaitAsync(TimeSpan.FromSeconds(8));
+            for (int i = 0; i < frames.Count; i++)
+            {
+                using var compressed = new MemoryStream(frames[i]);
+                using var inflate = new DeflateStream(compressed, CompressionMode.Decompress);
+                using var decoded = new MemoryStream(); inflate.CopyTo(decoded);
+                Assert.AreEqual(expected[i], System.Text.Encoding.Unicode.GetString(decoded.ToArray()));
+            }
         }
         finally { listener.Stop(); Common.Sk = previousSockets; MachineStuff.MachineMatrix = matrix; Encryption.MyKey = previousKey; Encryption.MagicNumber = magic; Setting.Values.ShareClipboard = share; }
     }
@@ -64,6 +74,7 @@ public sealed class ClipboardPipelineTests
         public void SendLog(string log) { }
         public void SendDragFile(string fileName) { }
         public void SendClipboardData(ByteArrayOrString data, bool isFilePath) => Received.TrySetResult(data);
+        public Task<bool> SendClipboardSnapshotAsync(ByteArrayOrString data, bool isFilePath, uint sequence) => Task.FromResult(Received.TrySetResult(data));
     }
 
     [TestMethod]
@@ -82,5 +93,8 @@ public sealed class ClipboardPipelineTests
         byte[] bytes = { 0, 1, 2, 255 }; proxy.SendClipboardData(new ByteArrayOrString(bytes), false);
         var image = await capture.Received.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.IsTrue(image.IsByteArray); CollectionAssert.AreEqual(bytes, image.GetByteArray());
+        capture.Received = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Assert.IsTrue(await proxy.SendClipboardSnapshotAsync(new ByteArrayOrString("new snapshot"), false, 42).WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.AreEqual("new snapshot", (await capture.Received.Task).GetString());
     }
 }

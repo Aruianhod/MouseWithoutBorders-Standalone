@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -21,6 +21,11 @@ namespace MouseWithoutBorders
         private readonly List<FocusArea> focusZone = new();
         private readonly Lock bmScreenLock = new();
         private long lastClipboardEventTime;
+        private readonly System.Windows.Forms.Timer clipboardDebounce = new() { Interval = 150 };
+        private readonly System.Windows.Forms.Timer clipboardWatchdog = new() { Interval = 500 };
+        private uint observedClipboardSequence;
+        private int clipboardReadRetries;
+        private bool clipboardSending;
 
         private IClipboardHelper remoteClipboardHelper;
         private const string TEXT_TYPE_SEP = "{4CFF57F7-BEDD-43d5-AE8F-27A61E886F2F}";
@@ -57,6 +62,10 @@ namespace MouseWithoutBorders
             InitializeComponent();
             lastClipboardEventTime = GetTick();
             ClipboardMMHelper.HookClipboard(this);
+            observedClipboardSequence = ClipboardSequence.GetClipboardSequenceNumber();
+            clipboardDebounce.Tick += (_, _) => { clipboardDebounce.Stop(); CaptureClipboardSnapshot(); };
+            clipboardWatchdog.Tick += (_, _) => ScheduleClipboardSnapshot();
+            clipboardWatchdog.Start();
         }
 
         private void SetDPIAwareness()
@@ -241,6 +250,69 @@ namespace MouseWithoutBorders
         private int screenLeft;
         private int screenTop;
 
+        private void ScheduleClipboardSnapshot()
+        {
+            uint current = ClipboardSequence.GetClipboardSequenceNumber();
+            if (current == observedClipboardSequence) return;
+            observedClipboardSequence = current;
+            clipboardReadRetries = 0;
+            clipboardDebounce.Stop();
+            clipboardDebounce.Start();
+        }
+
+        private async void CaptureClipboardSnapshot()
+        {
+            if (customScreenCaptureInProgress > 0 && GetTick() - lastClipboardEventTime < 10000)
+            { clipboardDebounce.Start(); return; }
+            if (clipboardSending) { clipboardDebounce.Start(); return; }
+            clipboardSending = true;
+            try
+            {
+                uint sequence = ClipboardSequence.GetClipboardSequenceNumber();
+                ByteArrayOrString? data = null;
+                bool isFile = false;
+                if (ClipboardMMHelper.ContainsText())
+                {
+                    string text = GetClipboardText();
+                    if (!string.IsNullOrEmpty(text)) data = text;
+                }
+                else if (ClipboardMMHelper.ContainsImage())
+                {
+                    using var image = ClipboardMMHelper.GetImage();
+                    if (image != null)
+                    {
+                        using var bytes = new MemoryStream();
+                        image.Save(bytes, ImageFormat.Png);
+                        if (bytes.Length > 0 && bytes.Length <= MAX_IMAGE_SIZE) data = bytes.ToArray();
+                        SendLog("Image from clipboard: bytes=" + bytes.Length);
+                    }
+                }
+                else if (ClipboardMMHelper.ContainsFileDropList())
+                {
+                    StringCollection files = ClipboardMMHelper.GetFileDropList();
+                    if (files?.Count > 0) { data = files[0]; isFile = true; }
+                }
+                if (data == null)
+                {
+                    if (++clipboardReadRetries < 5 && !IsDisposed) clipboardDebounce.Start();
+                    return;
+                }
+                if (sequence != ClipboardSequence.GetClipboardSequenceNumber()) { ScheduleClipboardSnapshot(); return; }
+                if (remoteClipboardHelper == null) remoteClipboardHelper = await System.Threading.Tasks.Task.Run(IpcHelper.CreateIpcClient);
+                if (remoteClipboardHelper == null) throw new IOException("剪贴板主进程暂未连接。");
+                bool accepted = await remoteClipboardHelper.SendClipboardSnapshotAsync((ByteArrayOrString)data, isFile, sequence).WaitAsync(TimeSpan.FromSeconds(5));
+                SendLog($"Clipboard snapshot acknowledged: sequence={sequence}, accepted={accepted}");
+            }
+            catch (Exception ex)
+            {
+                SendLog("Clipboard snapshot retry: " + ex.Message);
+                try { (remoteClipboardHelper as IDisposable)?.Dispose(); } catch { }
+                remoteClipboardHelper = null;
+                if (!IsDisposed) clipboardDebounce.Start();
+            }
+            finally { clipboardSending = false; }
+        }
+
         protected override void WndProc(ref Message m)
         {
             const int WM_DRAWCLIPBOARD = 0x0308;
@@ -253,115 +325,7 @@ namespace MouseWithoutBorders
                 case WM_CLIPBOARDUPDATE:
                     ClipboardMMHelper.PassMessageToTheNextViewer(m);
 
-                    if (GetTick() - lastClipboardEventTime < 1000)
-                    {
-                        lastClipboardEventTime = GetTick();
-                        return;
-                    }
-
-                    if (customScreenCaptureInProgress > 0)
-                    {
-                        // 10 secs timeout for a failed capture.
-                        if (GetTick() - lastClipboardEventTime < 10000)
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            customScreenCaptureInProgress = 0;
-                        }
-                    }
-
-                    lastClipboardEventTime = GetTick();
-
-                    ByteArrayOrString? data = null;
-                    bool isFile = false;
-
-                    if (ClipboardMMHelper.ContainsText())
-                    {
-                        data = GetClipboardText();
-                    }
-                    else if (ClipboardMMHelper.ContainsImage())
-                    {
-                        MemoryStream ms = new();
-                        Image im = ClipboardMMHelper.GetImage();
-
-                        if (im != null)
-                        {
-                            im.Save(ms, ImageFormat.Png);
-
-                            if (ms.Length > 0)
-                            {
-                                if (ms.Length > MAX_IMAGE_SIZE)
-                                {
-                                    SendLog("Image from clipboard, image too big: " + ms.Length.ToString(CultureInfo.InvariantCulture));
-                                }
-                                else
-                                {
-                                    data = ms.GetBuffer();
-                                    SendLog("Image from clipboard: " + ms.Length.ToString(CultureInfo.InvariantCulture));
-                                }
-                            }
-                            else
-                            {
-                                SendLog("ClipboardMMHelper image is 0 in length.");
-                            }
-                        }
-                        else
-                        {
-                            SendLog("ClipboardMMHelper image (GetImage) is null.");
-                        }
-
-                        ms.Dispose();
-                    }
-                    else if (ClipboardMMHelper.ContainsFileDropList())
-                    {
-                        StringCollection files = ClipboardMMHelper.GetFileDropList();
-
-                        if (files != null)
-                        {
-                            if (files.Count > 0)
-                            {
-                                data = files[0];
-                                isFile = true;
-
-                                SendLog("File from clipboard: " + files[0]);
-                            }
-                            else
-                            {
-                                SendLog("GetFileDropList returned no file.");
-                            }
-                        }
-                        else
-                        {
-                            SendLog("GetFileDropList returned null.");
-                        }
-                    }
-                    else
-                    {
-                        SendLog("ClipboardMMHelper does not have text/image/file data.");
-                        return;
-                    }
-
-                    if (data != null)
-                    {
-                        try
-                        {
-                            remoteClipboardHelper.SendClipboardData((ByteArrayOrString)data, isFile);
-                        }
-                        catch (Exception ex)
-                        {
-                            EventLogger.LogEvent("WM_DRAWCLIPBOARD: " + ex.Message, EventLogEntryType.Error);
-                            QuitDueToCommunicationError();
-                        }
-
-                        GC.Collect();
-                    }
-                    else
-                    {
-                        SendLog("Null clipboard data returned. See previous messages (if any) for more information.");
-                    }
-
+                    ScheduleClipboardSnapshot();
                     break;
 
                 case WM_CHANGECBCHAIN:
@@ -700,6 +664,7 @@ namespace MouseWithoutBorders
 
         private void FormHelper_FormClosed(object sender, FormClosedEventArgs e)
         {
+            clipboardDebounce.Dispose(); clipboardWatchdog.Dispose();
             ClipboardMMHelper.UnhookClipboard();
         }
 

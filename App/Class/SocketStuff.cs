@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -1606,7 +1606,7 @@ namespace MouseWithoutBorders.Class
                             using var asyncFlowControl = ExecutionContext.SuppressFlow();
 
                             System.Threading.Thread thread = Thread.CurrentThread;
-                            thread.Name = $"{nameof(SendOrReceiveClipboardData)}.{thread.ManagedThreadId}";
+                            if (thread.Name == null) thread.Name = $"{nameof(SendOrReceiveClipboardData)}.{thread.ManagedThreadId}";
                             Thread.UpdateThreads(thread);
                             SendOrReceiveClipboardData(s);
                         }).Start();
@@ -1626,10 +1626,6 @@ namespace MouseWithoutBorders.Class
             {
                 string remoteEndPoint = s.RemoteEndPoint.ToString();
                 Logger.LogDebug("SendClipboardData: Request accepted: " + s.LocalEndPoint.ToString() + "/" + remoteEndPoint);
-                DragDrop.IsDropping = false;
-                DragDrop.IsDragging = false;
-                DragDrop.DragMachine = (ID)1;
-
                 bool clientPushData = true;
                 ClipboardPostAction postAction = ClipboardPostAction.Other;
                 bool handShaken = Clipboard.ShakeHand(ref remoteEndPoint, s, out Stream enStream, out Stream deStream, ref clientPushData, ref postAction);
@@ -1642,11 +1638,22 @@ namespace MouseWithoutBorders.Class
                 else
                 {
                     Logger.LogDebug($"{nameof(SendOrReceiveClipboardData)}: Clipboard connection accepted: " + remoteEndPoint);
-                    Common.SetToggleIcon(new int[Common.TOGGLE_ICONS_SIZE] { Common.ICON_SMALL_CLIPBOARD, -1, -1, -1 });
+                    if (postAction != ClipboardPostAction.SettingsSync)
+                    {
+                        DragDrop.IsDropping = false;
+                        DragDrop.IsDragging = false;
+                        DragDrop.DragMachine = (ID)1;
+                        Common.SetToggleIcon(new int[Common.TOGGLE_ICONS_SIZE] { Common.ICON_SMALL_CLIPBOARD, -1, -1, -1 });
+                    }
                 }
 
                 if (clientPushData)
                 {
+                    if (postAction == ClipboardPostAction.SettingsSync)
+                    {
+                        Sync.SyncService.Receive(remoteEndPoint, s, enStream, deStream);
+                        return;
+                    }
                     if (postAction == ClipboardPostAction.FileInbox)
                     {
                         Files.FileTransferService.Receive(remoteEndPoint, s, enStream, deStream);

@@ -1,3 +1,17 @@
+﻿# Standalone 0.102.2933.16 — bidirectional settings and clipboard reliability
+
+- Synchronize saved common settings and complementary audio routes between authenticated paired peers. Either computer can publish edits; no fixed primary.
+- Persist a logical revision counter and deterministic tie-break identity, observe pending local edits before applying remote state, and avoid republishing received snapshots as edits.
+- Use whole-snapshot conflict resolution. Independent simultaneous edits are not field-merged.
+- Preserve local device IDs and gain, reject taking over a third-peer route, and keep unsupported microphone setup pending until local virtual-device configuration is ready.
+- Retain local default-device/driver setup, startup preferences, credentials, pairing secrets and update locations.
+- Authenticate bounded frames and receipts with pair-key HMAC, receiver-generated challenges and role/identity binding, over existing encrypted transport and live verified input connections. Discover support before sending to older peers.
+- Refresh open settings views; preserve unsaved audio edits and display a conflict notice. Settings requests do not reset drag/drop state.
+- Replace one-second clipboard suppression with sequence-based echo filtering, debounce and a fallback sequence watcher.
+- Add acknowledged helper RPC, reconnect its named pipe after failures, retry clipboard access, serialize outgoing frames and decode only actual inflated text bytes.
+- Test encrypted rapid-copy ordering, helper RPC, authenticated sync framing, replay/tampering, conflict convergence, UI-thread state application/persistence, revoked pairing and audio direction/device preservation.
+- Automated validation cannot replace two-computer clipboard and listening checks.
+
 # Standalone 0.102.2933.15 — lower audio latency
 
 - Enable a configurable low-latency audio mode for existing and new settings; preserve explicit opt-out through quick setup.

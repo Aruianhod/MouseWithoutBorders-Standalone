@@ -122,6 +122,8 @@ namespace MouseWithoutBorders
         void SendDragFile(string fileName);
 
         void SendClipboardData(ByteArrayOrString data, bool isFilePath);
+
+        System.Threading.Tasks.Task<bool> SendClipboardSnapshotAsync(ByteArrayOrString data, bool isFilePath, uint sequence);
     }
 
 #if !MM_HELPER
@@ -159,6 +161,9 @@ namespace MouseWithoutBorders
         {
             _ = Clipboard.CheckClipboardEx(data, isFilePath);
         }
+
+        public System.Threading.Tasks.Task<bool> SendClipboardSnapshotAsync(ByteArrayOrString data, bool isFilePath, uint sequence)
+            => System.Threading.Tasks.Task.FromResult(Clipboard.CheckClipboardEx(data, isFilePath, sequence));
     }
 #endif
 

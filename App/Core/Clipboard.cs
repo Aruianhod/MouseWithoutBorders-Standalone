@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -81,9 +81,18 @@ internal static class Clipboard
 
     internal static bool HasSwitchedMachineSinceLastCopy { get; set; }
 
-    internal static bool CheckClipboardEx(ByteArrayOrString data, bool isFilePath)
+    private static readonly ClipboardChangeTracker Changes = new();
+    private static readonly object ClipboardSnapshotGate = new();
+    private static readonly object ClipboardSendGate = new();
+    private static Task clipboardSendTail = Task.CompletedTask;
+    internal static bool CheckClipboardEx(ByteArrayOrString data, bool isFilePath, uint sequence = 0)
     {
-        Logger.LogDebug($"{nameof(CheckClipboardEx)}: ShareClipboard = {Setting.Values.ShareClipboard}, TransferFile = {Setting.Values.TransferFile}, data = {data}.");
+        lock (ClipboardSnapshotGate) return CheckClipboardSnapshot(data, isFilePath, sequence);
+    }
+
+    private static bool CheckClipboardSnapshot(ByteArrayOrString data, bool isFilePath, uint sequence)
+    {
+        Logger.LogDebug($"Clipboard change: shared={Setting.Values.ShareClipboard}, file={isFilePath}, image={data.IsByteArray}.");
         Logger.LogDebug($"{nameof(CheckClipboardEx)}: {nameof(Setting.Values.OneWayClipboardMode)} = {Setting.Values.OneWayClipboardMode}.");
 
         if (!Setting.Values.ShareClipboard)
@@ -96,14 +105,8 @@ internal static class Clipboard
             return false;
         }
 
-        if (Common.GetTick() - LastClipboardEventTime < 1000)
-        {
-            Logger.LogDebug("GetTick() - lastClipboardEventTime < 1000");
-            LastClipboardEventTime = Common.GetTick();
-            return false;
-        }
-
-        LastClipboardEventTime = Common.GetTick();
+        if (!Changes.TryLocal(sequence)) return false;
+        Logger.Log($"Clipboard local change accepted: sequence={sequence}, kind={(isFilePath ? "file" : data.IsByteArray ? "image" : "text")}");
 
         try
         {
@@ -126,15 +129,6 @@ internal static class Clipboard
 
             if (stringData != null)
             {
-                if (!HasSwitchedMachineSinceLastCopy)
-                {
-                    if (lastClipboardObject is string lastStringData && lastStringData.Equals(stringData, StringComparison.OrdinalIgnoreCase))
-                    {
-                        Logger.LogDebug("CheckClipboardEx: Same string data.");
-                        return false;
-                    }
-                }
-
                 HasSwitchedMachineSinceLastCopy = false;
 
                 if (isFilePath)
@@ -197,20 +191,11 @@ internal static class Clipboard
                     Logger.LogDebug("Plain/Zip = " + texts.Length.ToString(CultureInfo.CurrentCulture) + "/" +
                         ms.Length.ToString(CultureInfo.CurrentCulture));
 
-                    LastClipboardData = ms.GetBuffer();
+                    LastClipboardData = ms.ToArray();
                 }
             }
             else if (byteData != null)
             {
-                if (!HasSwitchedMachineSinceLastCopy)
-                {
-                    if (lastClipboardObject is byte[] lastByteData && Enumerable.SequenceEqual(lastByteData, byteData))
-                    {
-                        Logger.LogDebug("CheckClipboardEx: Same byte[] data.");
-                        return false;
-                    }
-                }
-
                 HasSwitchedMachineSinceLastCopy = false;
 
                 Logger.LogDebug("Clipboard contains image");
@@ -256,52 +241,60 @@ internal static class Clipboard
             return;
         }
 
-        new Task(() =>
+        lock (ClipboardSendGate)
         {
-            // SuppressFlow fixes an issue on service mode, where the helper process can't get enough permissions to be started again.
-            // More details can be found on: https://github.com/microsoft/PowerToys/pull/36892
-            using var asyncFlowControl = ExecutionContext.SuppressFlow();
-
-            System.Threading.Thread thread = Thread.CurrentThread;
-            thread.Name = $"{nameof(SendClipboardDataUsingTCP)}.{thread.ManagedThreadId}";
-            Thread.UpdateThreads(thread);
-            int l = bytes.Length;
-            int index = 0;
-            int len;
-            DATA package = new();
-            byte[] buf = new byte[Package.PACKAGE_SIZE_EX];
-            int dataStart = Package.PACKAGE_SIZE_EX - DATA_SIZE;
-
-            while (true)
+            clipboardSendTail = clipboardSendTail.ContinueWith(_ =>
             {
-                if ((index + DATA_SIZE) > l)
+                try
                 {
-                    len = l - index;
-                    Array.Clear(buf, 0, Package.PACKAGE_SIZE_EX);
-                }
-                else
+                // SuppressFlow fixes an issue on service mode, where the helper process can't get enough permissions to be started again.
+                // More details can be found on: https://github.com/microsoft/PowerToys/pull/36892
+                using var asyncFlowControl = ExecutionContext.SuppressFlow();
+    
+                System.Threading.Thread thread = Thread.CurrentThread;
+                if (thread.Name == null) thread.Name = $"{nameof(SendClipboardDataUsingTCP)}.{thread.ManagedThreadId}";
+                Thread.UpdateThreads(thread);
+                int l = bytes.Length;
+                int index = 0;
+                int len;
+                DATA package = new();
+                byte[] buf = new byte[Package.PACKAGE_SIZE_EX];
+                int dataStart = Package.PACKAGE_SIZE_EX - DATA_SIZE;
+    
+                while (true)
                 {
-                    len = DATA_SIZE;
+                    if ((index + DATA_SIZE) > l)
+                    {
+                        len = l - index;
+                        Array.Clear(buf, 0, Package.PACKAGE_SIZE_EX);
+                    }
+                    else
+                    {
+                        len = DATA_SIZE;
+                    }
+    
+                    Array.Copy(bytes, index, buf, dataStart, len);
+                    package.Bytes = buf;
+    
+                    package.Type = image ? PackageType.ClipboardImage : PackageType.ClipboardText;
+                    package.Des = ID.ALL;
+                    Common.SkSend(package, (uint)Common.MachineID, false);
+    
+                    index += DATA_SIZE;
+                    if (index >= l)
+                    {
+                        break;
+                    }
                 }
-
-                Array.Copy(bytes, index, buf, dataStart, len);
-                package.Bytes = buf;
-
-                package.Type = image ? PackageType.ClipboardImage : PackageType.ClipboardText;
+    
+                package.Type = PackageType.ClipboardDataEnd;
                 package.Des = ID.ALL;
                 Common.SkSend(package, (uint)Common.MachineID, false);
-
-                index += DATA_SIZE;
-                if (index >= l)
-                {
-                    break;
+                Logger.Log($"Clipboard send completed: kind={(image ? "image" : "text")}, bytes={bytes.Length}");
                 }
-            }
-
-            package.Type = PackageType.ClipboardDataEnd;
-            package.Des = ID.ALL;
-            Common.SkSend(package, (uint)Common.MachineID, false);
-        }).Start();
+                catch (Exception ex) { Logger.Log("Clipboard send failed: " + ex.Message); }
+            }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+        }
     }
 
     internal static void ReceiveClipboardDataUsingTCP(DATA data, bool image, TcpSk tcp)
@@ -1139,7 +1132,7 @@ internal static class Clipboard
 
                 if (rv > 0)
                 {
-                    st += Common.GetStringU(buffer);
+                    st += Common.GetStringU(buffer.AsSpan(0, rv).ToArray());
                 }
                 else
                 {
@@ -1209,6 +1202,7 @@ internal static class Clipboard
                     () =>
                     {
                         SystemClipboard.SetFileDropList(filePaths);
+                    Changes.MarkRemote(ClipboardSequence.GetClipboardSequenceNumber());
                         return true;
                     },
                     (log) => Logger.TelemetryLogTrace(
@@ -1246,6 +1240,7 @@ internal static class Clipboard
                     () =>
                 {
                     SystemClipboard.SetImage(image);
+                    Changes.MarkRemote(ClipboardSequence.GetClipboardSequenceNumber());
                     return true;
                 },
                     (log) => Logger.TelemetryLogTrace(log, SeverityLevel.Information),
@@ -1277,6 +1272,7 @@ internal static class Clipboard
                     () =>
                 {
                     SystemClipboard.SetText(text);
+                    Changes.MarkRemote(ClipboardSequence.GetClipboardSequenceNumber());
                     return true;
                 },
                     (log) => Logger.TelemetryLogTrace(log, SeverityLevel.Information),
@@ -1304,6 +1300,7 @@ internal static class Clipboard
             try
             {
                 SystemClipboard.SetDataObject(dataObject, true, 10, 200);
+                    Changes.MarkRemote(ClipboardSequence.GetClipboardSequenceNumber());
             }
             catch (ExternalException e)
             {

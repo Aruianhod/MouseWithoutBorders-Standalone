@@ -270,10 +270,11 @@ namespace MouseWithoutBorders.Class
 
                 var formScreen = new FrmScreen();
                 Audio.AudioService.Instance.Start();
+                formScreen.Shown += (_, _) => Sync.SyncService.Start(formScreen);
                 formScreen.Shown += (_, _) => Updates.UpdateClient.StartNotifications(formScreen.NotifyIcon);
                 formScreen.Shown += (_, _) => formScreen.BeginInvoke(new Action(() => Audio.AudioQuickSetupForm.ResumePending(formScreen)));
                 try { Application.Run(formScreen); }
-                finally { Audio.AudioService.Instance.Stop(); }
+                finally { Sync.SyncService.Stop(); Audio.AudioService.Instance.Stop(); }
 
                 
             }

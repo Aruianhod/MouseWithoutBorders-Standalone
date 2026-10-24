@@ -1,6 +1,6 @@
 # 无界鼠标独立版 / Mouse Without Borders Standalone
 
-基于 Microsoft PowerToys Mouse Without Borders 的 Windows x64 独立构建。当前快照：**0.102.2933.15 · 可选低延迟音频**。这是个人维护的衍生项目，不是 Microsoft 官方发行版。
+基于 Microsoft PowerToys Mouse Without Borders 的 Windows x64 独立构建。当前快照：**0.102.2933.16 · 双向设置同步与剪贴板可靠性**。这是个人维护的衍生项目，不是 Microsoft 官方发行版。
 
 ## 下载和使用
 
@@ -8,7 +8,7 @@
 
 两端先完成鼠标配对与电脑排列，再配置需要的剪贴板、文件和音频功能。详细步骤见 [中文说明](README-zh-CN.txt)。默认管理员启动从 .9 引入，登录自启动从 .10 引入，需要时仍遵循 Windows 授权流程；不提供 UAC 安全桌面控制。
 
-当前版本变更：增加低延迟模式与音频帧积压控制。该初版对 Wi-Fi 抖动较敏感，推荐使用 .17。
+当前版本变更：两端均可修改并同步通用设置和配套音频路由，保留各自设备；修复单向剪贴板可靠性问题。
 
 ## 公开版本与历史
 

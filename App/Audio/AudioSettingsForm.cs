@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Linq;
+using System.Text.Json;
 using System.Windows.Forms;
 using MouseWithoutBorders.Core;
 using NAudio.CoreAudioApi;
@@ -23,6 +24,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
     private readonly Button quick = new() { Text = "一键配置…", AutoSize = true };
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
     private bool applying;
+    private string loadedOptions;
 
     internal AudioSettingsForm(AudioOptions initial = null)
     {
@@ -76,6 +78,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         actions.Controls.Add(quick);
         root.Controls.Add(actions, 0, 4);
         Controls.Add(root);
+        loadedOptions = JsonSerializer.Serialize(ReadOptions());
         apply.Click += async (_, _) => await Save(false);
         stop.Click += async (_, _) => await Save(true);
         refresh.Click += (_, _) => RefreshDevices();
@@ -87,8 +90,14 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
             sendMicrophone.LoadRoute(updated.SendMicrophone); receiveMicrophone.LoadRoute(updated.ReceiveMicrophone);
             port.Value = updated.Port; buffer.Value = updated.BufferMilliseconds; lowLatency.Checked = updated.LowLatency;
             RefreshDevices();
+            loadedOptions = JsonSerializer.Serialize(ReadOptions());
         };
-        timer.Tick += (_, _) => { if (!applying) state.Text = AudioService.Instance.Status; };
+        timer.Tick += (_, _) =>
+        {
+            if (applying) return;
+            bool current = RefreshAppliedOptions(AudioService.Instance.Options);
+            state.Text = AudioService.Instance.Status + (current ? "" : "\r\n对面已更新音频配置。本页有未保存修改；保存将采用本页设置，关闭重开可查看已同步设置。");
+        };
         Shown += (_, _) =>
         {
             // An explicit model also supports offline UI previews without device access.
@@ -97,6 +106,18 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         };
         FormClosing += (_, e) => { if (applying) e.Cancel = true; };
         FormClosed += (_, _) => timer.Dispose();
+    }
+
+    internal bool RefreshAppliedOptions(AudioOptions updated, bool refreshDevices = true)
+    {
+        if (JsonSerializer.Serialize(updated) == loadedOptions) return true;
+        if (JsonSerializer.Serialize(ReadOptions()) != loadedOptions) return false;
+        sendSystem.LoadRoute(updated.SendSystem); receiveSystem.LoadRoute(updated.ReceiveSystem);
+        sendMicrophone.LoadRoute(updated.SendMicrophone); receiveMicrophone.LoadRoute(updated.ReceiveMicrophone);
+        port.Value = updated.Port; buffer.Value = updated.BufferMilliseconds; lowLatency.Checked = updated.LowLatency;
+        if (refreshDevices) RefreshDevices();
+        loadedOptions = JsonSerializer.Serialize(ReadOptions());
+        return true;
     }
 
     internal AudioOptions ReadOptions() => new()
@@ -149,6 +170,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
             }
             state.Text = "正在应用，音频连接会按新设置重建……";
             await AudioService.Instance.ApplyAsync(value);
+            loadedOptions = JsonSerializer.Serialize(value);
             state.Text = AudioService.Instance.Status;
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "无法应用音频设置", MessageBoxButtons.OK, MessageBoxIcon.Information); }

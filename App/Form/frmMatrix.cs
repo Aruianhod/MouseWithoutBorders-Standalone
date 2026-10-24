@@ -68,6 +68,12 @@ namespace MouseWithoutBorders
             filePage.Controls.Add(fileButton);
             filePage.Controls.Add(new Label { Text = "选择已连接电脑，将文件拖入窗口即可发送。\r\n支持多文件、取消及完整性校验，同名自动改名。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
             tabControlSetting.TabPages.Add(filePage);
+            var syncPage = new TabPage("设置同步");
+            var syncButton = new Button { Text = "配置配对设置同步…", AutoSize = true, Location = new Point(24, 24) };
+            syncButton.Click += (_, _) => { using var sync = new Sync.SyncSettingsForm(); DialogWindows.Show(sync, this); };
+            syncPage.Controls.Add(syncButton);
+            syncPage.Controls.Add(new Label { Text = "两边都能修改；连接后自动同步通用设置和音频收发关系。\r\n保留各自设备和音量，不传输登录密码或配对码。", AutoSize = true, Location = new Point(24, 72) });
+            tabControlSetting.TabPages.Add(syncPage);
 
             textBoxEnc.Font = new System.Drawing.Font(Control.DefaultFont.Name, 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
 

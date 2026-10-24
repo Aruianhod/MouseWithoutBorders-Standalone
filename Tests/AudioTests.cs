@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -14,6 +14,31 @@ namespace MouseWithoutBorders.UnitTests;
 public sealed class AudioTests
 {
     private const string PairingKey = "AudioFixturePairingCode2026";
+
+    [TestMethod]
+    public void AudioWindowRefreshesSynchronizedOptionsButPreservesUnsavedLocalEdits()
+    {
+        Exception failure = null;
+        var thread = new System.Threading.Thread(() =>
+        {
+            try
+            {
+                using var form = new AudioSettingsForm(new AudioOptions());
+                var remote = new AudioOptions { Port = 16002, LowLatency = false };
+                Assert.IsTrue(form.RefreshAppliedOptions(remote, false));
+                Assert.AreEqual(16002, form.ReadOptions().Port); Assert.IsFalse(form.ReadOptions().LowLatency);
+                var network = form.Controls.OfType<System.Windows.Forms.TableLayoutPanel>().Single().Controls
+                    .OfType<System.Windows.Forms.FlowLayoutPanel>().Single(p => p.Controls.OfType<System.Windows.Forms.CheckBox>().Any());
+                network.Controls.OfType<System.Windows.Forms.CheckBox>().Single().Checked = true;
+                remote.Port = 17002;
+                Assert.IsFalse(form.RefreshAppliedOptions(remote, false));
+                Assert.AreEqual(16002, form.ReadOptions().Port); Assert.IsTrue(form.ReadOptions().LowLatency);
+            }
+            catch (Exception ex) { failure = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA); thread.Start(); Assert.IsTrue(thread.Join(TimeSpan.FromSeconds(10)));
+        if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+    }
 
     [TestMethod]
     public void AudioIsOptInAndConfigurationSurvivesReloadIncludingDevicesAndVolumes()
