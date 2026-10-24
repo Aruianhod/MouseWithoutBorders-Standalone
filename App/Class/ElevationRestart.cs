@@ -44,6 +44,35 @@ internal static class ElevationRestart
         return start;
     }
 
+    // Keep the executable launchable by older updaters (CreateProcess/asInvoker).
+    // Only the small bootstrap runs unelevated; settings, input and audio start afterwards.
+    internal static bool PrepareStartup(string[] args)
+    {
+        if (args.Length > 1 && args[1] == Switch)
+        {
+            PrepareElevatedStartup(args);
+            return true;
+        }
+        if (args.Length > 1) return true; // Existing argument validation reports unsupported modes.
+        if (IsElevated) return true;
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MWB_STANDALONE_DATA")))
+            throw new InvalidOperationException("当前使用自定义配置目录，请从原启动环境以管理员身份运行。");
+        using var current = Process.GetCurrentProcess();
+        using var identity = WindowsIdentity.GetCurrent();
+        var request = new Request(current.Id, current.StartTime.ToUniversalTime().Ticks, identity.User.Value, Guid.NewGuid());
+        using var ready = new EventWaitHandle(false, EventResetMode.ManualReset, request.EventName);
+        try
+        {
+            using var child = Process.Start(CreateStartInfo(Environment.ProcessPath, request)) ?? throw new IOException("无法启动管理员实例。");
+            WaitForReadyAsync(ready, () => child.HasExited, TimeSpan.FromSeconds(15)).GetAwaiter().GetResult();
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            // No input hooks, settings or audio have been initialized. Cancel means do not start.
+        }
+        return false;
+    }
+
     internal static async Task WaitForReadyAsync(WaitHandle ready, Func<bool> hasExited, TimeSpan limit)
     {
         var timeout = Stopwatch.StartNew();
@@ -51,7 +80,7 @@ internal static class ElevationRestart
         {
             if (hasExited()) throw new IOException("管理员实例未能接管，当前连接保持运行。");
             if (timeout.Elapsed >= limit) throw new TimeoutException("等待管理员实例超时，当前程序保持运行。");
-            await Task.Delay(100);
+            await Task.Delay(100).ConfigureAwait(false);
         }
         if (hasExited()) throw new IOException("管理员实例已经退出，当前连接保持运行。");
     }

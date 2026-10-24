@@ -9,6 +9,31 @@ namespace MouseWithoutBorders.UnitTests;
 public sealed class AudioQuickSetupTests
 {
     [TestMethod]
+    public void MissingHistoricalDeviceDoesNotBlockCableInstallationDetection()
+    {
+        bool readMissingProperty = false;
+        Assert.IsFalse(AudioQuickSetup.IsExistingCable(DeviceState.NotPresent, () =>
+        {
+            readMissingProperty = true;
+            throw new System.Runtime.InteropServices.COMException("0xE000020B", unchecked((int)0xE000020B));
+        }));
+        Assert.IsFalse(readMissingProperty);
+        Assert.IsTrue(AudioQuickSetup.IsExistingCable(DeviceState.Disabled, () => "VB-Audio Virtual Cable"));
+        Assert.IsTrue(AudioQuickSetup.IsExistingCable(DeviceState.Unplugged, () => "VB-Audio Virtual Cable"));
+        Assert.IsTrue(AudioQuickSetup.IsExistingCable(DeviceState.Active, () => "VB-Audio Virtual Cable"));
+        Assert.IsFalse(AudioQuickSetup.IsExistingCable(DeviceState.Active, () => "Realtek Audio"));
+    }
+
+    [TestMethod]
+    public void AudioFailureReportsStageAndOriginalErrorCode()
+    {
+        var error = new System.Runtime.InteropServices.COMException("0xE000020B", unchecked((int)0xE000020B));
+        string message = AudioQuickSetup.DescribeFailure(error, "检测未就绪设备");
+        StringAssert.Contains(message, "检测未就绪设备");
+        StringAssert.Contains(message, "0xE000020B");
+        StringAssert.Contains(message, "音频设备实例");
+    }
+    [TestMethod]
     public void WindowsDefaultEndpointInterfaceCanBeAcquiredWithoutChangingDevices()
     {
         WindowsAudioDefaults.CheckSupport();

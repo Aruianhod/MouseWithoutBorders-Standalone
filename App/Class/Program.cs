@@ -59,6 +59,15 @@ namespace MouseWithoutBorders.Class
         [STAThread]
         private static void Main()
         {
+            try
+            {
+                if (!ElevationRestart.PrepareStartup(Environment.GetCommandLineArgs())) return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("无法以管理员身份启动：\r\n" + ex.Message, "无界鼠标", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             ManagedCommon.Logger.InitializeLogger("\\MouseWithoutBorders\\Logs");
             Logger.Log(Application.ProductName + " Started!");
 
@@ -84,7 +93,6 @@ namespace MouseWithoutBorders.Class
                 string[] args = Environment.GetCommandLineArgs();
                 if (args.Length > 1 && args[1] == ElevationRestart.Switch)
                 {
-                    ElevationRestart.PrepareElevatedStartup(args);
                     args = new[] { args[0] };
                 }
 

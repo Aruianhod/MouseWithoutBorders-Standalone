@@ -106,11 +106,14 @@ internal static class AudioQuickSetup
 
     internal static async Task<bool> ApplyAsync(string peer, QuickAudioRole role, bool defaultMicrophone, Action<string> progress, bool resume = false)
     {
+        progress("检查鼠标配对与音频设置……");
         if (!MachineStuff.MachineMatrix.Any(n => string.Equals(n, peer, StringComparison.OrdinalIgnoreCase))
             || string.Equals(peer, Common.MachineName, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("请先完成鼠标配对，并选择另一台电脑。");
         var defaults = new WindowsAudioDefaults();
+        progress("检查 Windows 默认音频设备接口……");
         if (role == QuickAudioRole.RemoteComputer) WindowsAudioDefaults.CheckSupport();
+        progress("读取并备份原来的默认播放设备和麦克风……");
         var prior = LoadState();
         if (prior != null && (prior.Pending || !string.IsNullOrEmpty(prior.AppliedCaptureId)) && (prior.Role != role || prior.Peer != peer))
             throw new InvalidOperationException("请先点击“还原一键配置”，再更换角色或电脑。");
@@ -121,11 +124,13 @@ internal static class AudioQuickSetup
             PreviousCapture = Enum.GetValues<Role>().Select(r => SafeCaptureDefault(defaults, r)).ToArray(),
         };
         state.SetDefaultMicrophone = defaultMicrophone;
+        progress("查找可用的 VB-CABLE 播放与录音端点……");
         var cable = FindCable();
         if (role == QuickAudioRole.RemoteComputer && cable == null)
         {
             if (resume) throw new IOException("重启后仍未检测到完整 VB-CABLE 设备，请查看官方安装结果或点击按钮重试。");
             // Do not reinstall over disabled/partial installations: the vendor may offer removal.
+            progress("检查未就绪或已禁用的虚拟声卡，跳过已不存在的旧设备……");
             if (HasInactiveCable()) throw new IOException("检测到未就绪或已禁用的 VB-CABLE。请先重启 Windows，或在声音设置中启用设备；不会重复安装或卸载已有驱动。");
             state.Pending = true;
             SaveState(state); // Back up playback AND capture before the installer can change them.
@@ -143,7 +148,11 @@ internal static class AudioQuickSetup
         // Drivers can switch the default speaker to CABLE Input. Restore the original
         // playback roles before selecting the system-audio source, avoiding feedback.
         if (role == QuickAudioRole.RemoteComputer && cable != null)
+        {
+            progress("检查并恢复原来的播放设备……");
             RestoreCablePlayback(defaults, state.PreviousRender);
+        }
+        progress("检查当前播放设备与音频路由……");
         string render = defaults.Get(DataFlow.Render, Role.Console);
         using (var sourceDevice = AudioDevices.Open(render, DataFlow.Render))
             if (sourceDevice.DeviceFriendlyName.Equals("VB-Audio Virtual Cable", StringComparison.OrdinalIgnoreCase))
@@ -160,7 +169,11 @@ internal static class AudioQuickSetup
             {
                 state.AppliedCaptureId = cable.CaptureId;
                 SaveState(state); // Persistent recovery point before changing any default role.
-                if (defaultMicrophone) SetMicrophone(defaults, cable.CaptureId);
+                if (defaultMicrophone)
+                {
+                    progress("将虚拟声卡设置为默认麦克风……");
+                    SetMicrophone(defaults, cable.CaptureId);
+                }
                 else RestoreChangedDefaults(defaults, DataFlow.Capture, state.PreviousCapture, cable.CaptureId);
             }
             progress("正在保存两条音频通道……");
@@ -221,12 +234,28 @@ internal static class AudioQuickSetup
                 RestoreChangedDefaults(defaults, DataFlow.Render, originals, current);
         }
     }
+    internal static bool IsExistingCable(DeviceState state, Func<string> readName)
+    {
+        // Windows can retain unplugged hardware records whose property store no longer
+        // exists (0xE000020B). Never read names from NotPresent endpoints.
+        if ((state & DeviceState.NotPresent) != 0) return false;
+        return string.Equals(readName(), "VB-Audio Virtual Cable", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string DescribeFailure(Exception error, string stage)
+    {
+        string detail = unchecked((uint)error.HResult) == 0xE000020B
+            ? "Windows 找不到对应的音频设备实例。请刷新设备列表；如果刚装过驱动，请重启 Windows 后重试。"
+            : error.Message;
+        return "本次配置尚未完成。\r\n失败步骤：" + stage + "\r\n" + detail + $"\r\n错误码：0x{error.HResult:X8}";
+    }
+
     private static bool HasInactiveCable()
     {
         using var devices = new MMDeviceEnumerator();
         foreach (var device in devices.EnumerateAudioEndPoints(DataFlow.All, DeviceState.All))
         {
-            using (device) if (device.DeviceFriendlyName.Equals("VB-Audio Virtual Cable", StringComparison.OrdinalIgnoreCase)) return true;
+            using (device) if (IsExistingCable(device.State, () => device.DeviceFriendlyName)) return true;
         }
         return false;
     }

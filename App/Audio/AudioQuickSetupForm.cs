@@ -85,13 +85,20 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
     {
         if (busy) return;
         ToggleBusy(true);
+        string stage = "检查所选电脑";
+        state.Clear();
         try
         {
             if (peer.SelectedItem == null) throw new InvalidOperationException("尚无其他已配对电脑，请先完成鼠标配对。");
             await AudioQuickSetup.ApplyAsync(peer.SelectedItem.ToString(), (QuickAudioRole)role.SelectedIndex,
-                setDefault.Checked, message => state.Text = message, resume);
+                setDefault.Checked, message => { stage = message; state.AppendText(message + Environment.NewLine); }, resume);
         }
-        catch (Exception ex) { state.Text = "本次配置尚未完成：" + ex.Message; }
+        catch (Exception ex)
+        {
+            state.AppendText(Environment.NewLine + AudioQuickSetup.DescribeFailure(ex, stage));
+            Logger.Log("Audio quick setup failed at: " + stage);
+            Logger.Log(ex);
+        }
         finally { ToggleBusy(false); }
     }
 

@@ -1,3 +1,13 @@
+# Standalone 0.102.2933.9 — default administrator startup and stale audio endpoints
+
+- Request same-account administrator rights before initializing input, settings or audio.
+  Keep an asInvoker bootstrap so older CreateProcess-based updaters can start this release.
+  Consent cancellation exits the bootstrap without initializing the application.
+- Skip NotPresent audio endpoints before reading their property stores during VB-CABLE detection.
+  Preserve checks for disabled/unplugged cables, stage-by-stage progress and full failure logs.
+- Add regression coverage for missing device property stores and contextual failure messages.
+- The remote screenshot's exact failure stack and physical driver/audio flow remain unverified.
+
 # Standalone 0.102.2933.8 — dialog ownership and administrator restart
 
 - Remove always-on-top from settings and pairing windows. Give tray dialogs a visible owner,

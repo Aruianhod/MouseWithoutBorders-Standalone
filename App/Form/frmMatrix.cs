@@ -74,7 +74,7 @@ namespace MouseWithoutBorders
             var elevateButton = new Button { Text = ElevationRestart.IsElevated ? "已以管理员身份运行" : "以管理员身份重新启动…", Enabled = !ElevationRestart.IsElevated, AutoSize = true, Location = new Point(24, 148) };
             elevateButton.Click += async (_, _) => { elevateButton.Enabled = false; try { await ElevationRestart.RestartAsync(this); } finally { if (!elevateButton.IsDisposed) elevateButton.Enabled = !ElevationRestart.IsElevated; } };
             updatePage.Controls.Add(elevateButton);
-            updatePage.Controls.Add(new Label { Text = "用于控制本机上的管理员窗口，需在被控制的电脑上启用。\r\n由 Windows 请求授权；取消后保持当前连接。配对与设置保留。\r\n不包含服务模式，不能控制 UAC 安全桌面或登录界面。", AutoSize = true, Location = new Point(24, 196) });
+            updatePage.Controls.Add(new Label { Text = "默认以管理员身份启动；由 Windows 请求授权，配对与设置保留。\r\n首次启动取消授权时不运行程序；需在被控制的电脑上更新。\r\n不包含服务模式，不能控制 UAC 安全桌面或登录界面。", AutoSize = true, Location = new Point(24, 196) });
 
             Text = Application.ProductName + " " + Application.ProductVersion + " - 设置";
             toolTip.ToolTipTitle = Application.ProductName;
