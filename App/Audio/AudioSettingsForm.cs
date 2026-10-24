@@ -50,7 +50,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
         sendMicrophone = new RouteEditor("把本机麦克风发送到另一台电脑", settings.SendMicrophone, DataFlow.Capture);
         receiveMicrophone = new RouteEditor("接收另一台电脑的麦克风", settings.ReceiveMicrophone, DataFlow.Render, true);
         AddTab(tabs, "系统声音", sendSystem, receiveSystem,
-            "发送源为所选播放设备上的全部声音。接收声音会与本机声音一起播放。发送和接收请选不同设备，避免循环回传。");
+            "想让副电脑扬声器不响：在副电脑点“一键配置”，选择“仅主电脑播放”。发送与麦克风接收请使用不同通道，避免串音。");
         AddTab(tabs, "麦克风", sendMicrophone, receiveMicrophone,
             "供会议/游戏使用：接收输出选虚拟音频线的播放端（如 CABLE Input），应用的麦克风选其录音端（CABLE Output）。需要自行安装虚拟音频设备；选耳机则为监听。");
         root.Controls.Add(tabs, 0, 1);
@@ -117,6 +117,7 @@ internal sealed class AudioSettingsForm : System.Windows.Forms.Form
             {
                 AudioService.Instance.Stop();
                 AudioQuickSetup.CancelPending();
+                AudioQuickSetup.RestorePlaybackOnStop();
                 // Emergency stop also works while other unsaved fields are invalid.
                 value = AudioService.Instance.Options;
                 foreach (var route in new[] { value.SendSystem, value.SendMicrophone, value.ReceiveSystem, value.ReceiveMicrophone }) route.Enabled = false;

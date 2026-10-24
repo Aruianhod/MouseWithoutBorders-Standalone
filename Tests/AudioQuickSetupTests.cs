@@ -108,7 +108,7 @@ public sealed class AudioQuickSetupTests
     {
         internal string[] Capture = { "mic-console", "mic-media", "mic-call" };
         public string Get(DataFlow flow, Role role) => Capture[(int)role];
-        public void Set(string id, Role role) => Capture[(int)role] = id;
+        public void Set(string id, Role role, DataFlow flow = DataFlow.Capture) => Capture[(int)role] = id;
     }
 
     [TestMethod]
@@ -126,7 +126,7 @@ public sealed class AudioQuickSetupTests
     private sealed class RejectDefaults : IAudioDefaults
     {
         public string Get(DataFlow flow, Role role) => "unchanged";
-        public void Set(string id, Role role) { }
+        public void Set(string id, Role role, DataFlow flow = DataFlow.Capture) { }
     }
     [TestMethod]
     public void SilentDefaultDeviceFailureIsReported()

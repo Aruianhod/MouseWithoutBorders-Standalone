@@ -11,6 +11,7 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
 {
     private readonly ComboBox peer = new() { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
     private readonly ComboBox role = new() { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
+    private readonly ComboBox playback = new() { Name = "PlaybackMode", DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
     private readonly CheckBox setDefault = new() { Text = "将远端麦克风设为本机默认麦克风（含通话默认设备）", Checked = true, AutoSize = true };
     private readonly TextBox state = new() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
     private readonly Button apply = new() { Text = "一键配置", AutoSize = true };
@@ -25,11 +26,11 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
         Name = "AudioQuickSetupForm";
         Font = new Font("Microsoft YaHei UI", 9F);
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(680, 500);
-        MinimumSize = new Size(640, 530);
+        ClientSize = new Size(720, 600);
+        MinimumSize = new Size(720, 630);
         StartPosition = FormStartPosition.CenterParent;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 8 };
-        foreach (int height in new[] { 54, 32, 32, 34, 74, 32 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 9 };
+        foreach (int height in new[] { 54, 32, 32, 34, 36, 108, 32 }) root.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
         root.Controls.Add(new Label { Text = "两台各配置一次，之后自动连接。\r\n选择另一台电脑，再选择耳机和麦克风插在哪一边。", Dock = DockStyle.Fill }, 0, 0);
@@ -46,28 +47,32 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
         root.Controls.Add(role, 0, 2);
         setDefault.Checked = pending?.SetDefaultMicrophone ?? true;
         setDefault.Enabled = role.SelectedIndex == 1;
-        role.SelectedIndexChanged += (_, _) => setDefault.Enabled = role.SelectedIndex == 1;
+        role.SelectedIndexChanged += (_, _) => setDefault.Enabled = playback.Enabled = role.SelectedIndex == 1;
         root.Controls.Add(setDefault, 0, 3);
+        playback.Items.AddRange(new object[] { "播放位置：两边同时播放（副电脑扬声器也响）", "播放位置：仅主电脑播放（副电脑扬声器不响）" });
+        playback.SelectedIndex = pending == null ? 1 : (int)pending.PlaybackMode;
+        playback.Enabled = role.SelectedIndex == 1;
+        root.Controls.Add(playback, 0, 4);
         root.Controls.Add(new Label
         {
-            Text = "主电脑自动发送麦克风、接收声音；副电脑自动发送声音、接收麦克风。\r\n副电脑缺少虚拟设备时，会启动官方驱动安装，需要管理员授权，可能需要重启。\r\n默认设备会先备份；重启后程序会继续配置。不会自动重启或卸载已有驱动。",
+            Text = "主电脑发送麦克风、接收声音；播放位置请在副电脑选择。\r\n仅主电脑播放：自动下载并安装 VB-Audio Hi-Fi Cable，和麦克风通道分开。\r\n首次需联网并完成官方 Install 窗口，可能需要重启；不需要打开 ASIO Bridge。\r\n默认设备会先备份，可切回两边播放或还原。固定使用扬声器的应用需改为系统默认。",
             Dock = DockStyle.Fill,
-        }, 0, 4);
-        var license = new LinkLabel { Text = "虚拟设备：VB-CABLE / VB-Audio（捐赠软件，欢迎捐赠或购买许可）", AutoSize = true };
+        }, 0, 5);
+        var license = new LinkLabel { Text = "VB-CABLE / Hi-Fi Cable · VB-Audio 捐赠软件（来源与许可）", AutoSize = true };
         license.LinkClicked += (_, _) => Process.Start(new ProcessStartInfo("https://vb-audio.com/Services/licensing.htm") { UseShellExecute = true });
-        root.Controls.Add(license, 0, 5);
-        root.Controls.Add(state, 0, 6);
+        root.Controls.Add(license, 0, 6);
+        root.Controls.Add(state, 0, 7);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft };
         actions.Controls.Add(apply); actions.Controls.Add(restore);
-        root.Controls.Add(actions, 0, 7);
+        root.Controls.Add(actions, 0, 8);
         Controls.Add(root);
-        state.Text = "点击“一键配置”会保存本机的两条音频通道；副电脑勾选上方选项时，还会切换 Windows 默认麦克风。\r\n会议/游戏软件如果指定了独立输入设备，需改为“系统默认”。";
+        state.Text = "点击“一键配置”保存两条音频通道及所选播放位置；副电脑还会按选项切换默认播放设备和麦克风。\r\n会议/游戏软件如果指定了独立输入设备，需改为“系统默认”。";
         apply.Click += async (_, _) => await Run(false);
         restore.Click += async (_, _) =>
         {
             if (busy) return;
             ToggleBusy(true);
-            try { await AudioQuickSetup.RestoreAsync(); state.Text = "已还原先前音频配置及仍由本程序指定的默认设备。保留已安装的 VB-CABLE。"; }
+            try { await AudioQuickSetup.RestoreAsync(); state.Text = "已还原先前音频配置及仍由本程序指定的默认设备。保留已安装的虚拟音频驱动。"; }
             catch (Exception ex) { state.Text = "还原未完成，备份仍保留：" + ex.Message; }
             finally { ToggleBusy(false); }
         };
@@ -80,6 +85,7 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
         busy = value;
         apply.Enabled = restore.Enabled = peer.Enabled = role.Enabled = !value;
         setDefault.Enabled = !value && role.SelectedIndex == 1;
+        playback.Enabled = !value && role.SelectedIndex == 1;
     }
     private async System.Threading.Tasks.Task Run(bool resume)
     {
@@ -91,7 +97,7 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
         {
             if (peer.SelectedItem == null) throw new InvalidOperationException("尚无其他已配对电脑，请先完成鼠标配对。");
             await AudioQuickSetup.ApplyAsync(peer.SelectedItem.ToString(), (QuickAudioRole)role.SelectedIndex,
-                setDefault.Checked, message => { stage = message; state.AppendText(message + Environment.NewLine); }, resume);
+                setDefault.Checked, message => { stage = message; state.AppendText(message + Environment.NewLine); }, resume, (RemotePlaybackMode)playback.SelectedIndex);
         }
         catch (Exception ex)
         {
@@ -106,7 +112,7 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
     {
         string[] peers = MachineStuff.MachineMatrix.Where(n => !string.IsNullOrWhiteSpace(n)
             && !string.Equals(n, Common.MachineName, StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        using var form = new AudioQuickSetupForm(peers, pending);
+        using var form = new AudioQuickSetupForm(peers, pending ?? AudioQuickSetup.LoadState());
         DialogWindows.Show(form, owner);
     }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
 
@@ -7,7 +8,40 @@ namespace MouseWithoutBorders.Audio;
 internal interface IAudioDefaults
 {
     string Get(DataFlow flow, Role role);
-    void Set(string id, Role role);
+    void Set(string id, Role role, DataFlow flow = DataFlow.Capture);
+}
+
+// Track only changes made by this setup, including a Set call that throws after applying.
+// Rollback preserves a device the user selected independently in the meantime.
+internal sealed class AudioDefaultsTransaction : IAudioDefaults
+{
+    private readonly IAudioDefaults inner;
+    private readonly Dictionary<(DataFlow, Role), (string Before, string After)> changes = new();
+    internal AudioDefaultsTransaction(IAudioDefaults inner) => this.inner = inner;
+    public string Get(DataFlow flow, Role role) => inner.Get(flow, role);
+    public void Set(string id, Role role, DataFlow flow = DataFlow.Capture)
+    {
+        var key = (flow, role);
+        string before = changes.TryGetValue(key, out var previous) ? previous.Before : inner.Get(flow, role);
+        changes[key] = (before, id);
+        inner.Set(id, role, flow);
+    }
+    internal void Rollback()
+    {
+        var failures = new List<Exception>();
+        foreach (var change in changes)
+        {
+            try
+            {
+                if (inner.Get(change.Key.Item1, change.Key.Item2) != change.Value.After) continue;
+                inner.Set(change.Value.Before, change.Key.Item2, change.Key.Item1);
+                if (inner.Get(change.Key.Item1, change.Key.Item2) != change.Value.Before)
+                    throw new InvalidOperationException("Windows 未能恢复音频设备，原设备备份仍保留。");
+            }
+            catch (Exception ex) { failures.Add(ex); }
+        }
+        if (failures.Count != 0) throw new AggregateException("音频设备恢复未完成，原设备备份仍保留。", failures);
+    }
 }
 
 internal sealed class WindowsAudioDefaults : IAudioDefaults
@@ -25,7 +59,7 @@ internal sealed class WindowsAudioDefaults : IAudioDefaults
         return device.ID;
     }
 
-    public void Set(string id, Role role)
+    public void Set(string id, Role role, DataFlow flow = DataFlow.Capture)
     {
         object instance = new PolicyConfigClient();
         try

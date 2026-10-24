@@ -1,3 +1,17 @@
+# Standalone 0.102.2933.13 — selectable secondary-PC playback
+
+- Add Both Computers / Headset Only to the secondary computer quick setup; old settings retain Both.
+- Headset Only routes all Windows default playback roles to independent VB-Audio Hi-Fi Cable.
+  Keep remote microphone reception on the original VB-CABLE; reject shared/ambiguous routes.
+- Download the original Hi-Fi Cable installer from its official HTTPS URL only when needed,
+  verify pinned archive/executable SHA-256, and show its original installation UI.
+  No driver is installed during upgrades. Keep installer identity and donation/licensing links visible.
+- Persist pre-switch playback roles, pending driver stage and reboot continuation. Switching back,
+  restore and Stop All restore playback defaults while preserving later manual choices.
+- Roll back partially applied playback and microphone default changes on configuration failure.
+- Test separated routes, migration/persistence, device ambiguity, partial default-change failures,
+  restore, tampering rejection and rendered UI; physical Hi-Fi Cable/remote sound awaits validation.
+
 # Standalone 0.102.2933.12 — audio connections from dual-stack input peers
 
 - Normalize IPv4-mapped IPv6 peer addresses to IPv4 before creating the audio sender socket.
