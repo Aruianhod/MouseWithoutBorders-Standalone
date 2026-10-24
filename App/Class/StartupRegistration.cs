@@ -50,11 +50,14 @@ internal static class StartupRegistration
         catch { Release(service); throw; }
     }
 
-    private static object Find(object folder, string sid)
+    internal static object ReadOrMissing(Func<object> read)
     {
-        try { return ((dynamic)folder).GetTask(Name(sid)); }
-        catch (COMException ex) when (ex.HResult == unchecked((int)0x80070002)) { return null; }
+        try { return read(); }
+        // COM dynamic dispatch maps ERROR_FILE_NOT_FOUND to FileNotFoundException on .NET.
+        catch (Exception ex) when (ex.HResult == unchecked((int)0x80070002)) { return null; }
     }
+
+    private static object Find(object folder, string sid) => ReadOrMissing(() => ((dynamic)folder).GetTask(Name(sid)));
 
     internal static State Read()
     {

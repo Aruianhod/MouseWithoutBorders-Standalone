@@ -9,6 +9,15 @@ namespace MouseWithoutBorders.UnitTests;
 public sealed class StartupRegistrationTests
 {
     [TestMethod]
+    public void FirstEnableHandlesBothNativeAndMappedMissingTaskErrors()
+    {
+        Assert.IsNull(StartupRegistration.ReadOrMissing(() => throw new FileNotFoundException()));
+        Assert.IsNull(StartupRegistration.ReadOrMissing(() => throw new System.Runtime.InteropServices.COMException("missing", unchecked((int)0x80070002))));
+        Assert.ThrowsExactly<UnauthorizedAccessException>(() => StartupRegistration.ReadOrMissing(() => throw new UnauthorizedAccessException()));
+        var task = new object();
+        Assert.AreSame(task, StartupRegistration.ReadOrMissing(() => task));
+    }
+    [TestMethod]
     public void LogonTaskUsesCurrentInteractiveUserAndSurvivesBatteryAndLongSessions()
     {
         using var identity = WindowsIdentity.GetCurrent();

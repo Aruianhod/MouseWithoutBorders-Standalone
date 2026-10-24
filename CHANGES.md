@@ -1,3 +1,8 @@
+# Standalone 0.102.2933.11 — first-time startup registration
+
+- Handle the FileNotFoundException produced by COM dynamic dispatch when a user has no
+  pre-existing task, as well as the original COM HRESULT. Preserve permission and other failures.
+
 # Standalone 0.102.2933.10 — optional elevated logon startup
 
 - Add a reversible startup checkbox backed by a current-user interactive scheduled task.

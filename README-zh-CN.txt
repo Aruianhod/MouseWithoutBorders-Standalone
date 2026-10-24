@@ -1,5 +1,5 @@
 无界鼠标独立便携版 / Mouse Without Borders Standalone
-版本：0.102.2933.10（可开关的登录后自动启动，补充音频配置指引；基于 Microsoft PowerToys v0.102.2933.0）
+版本：0.102.2933.11（可开关的登录后自动启动，修复首次启用；基于 Microsoft PowerToys v0.102.2933.0）
 构建日期：2026-10-24
 
 这是什么
