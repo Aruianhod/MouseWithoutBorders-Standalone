@@ -79,7 +79,7 @@ namespace MouseWithoutBorders
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "frmSettings";
-            this.TopMost = true;
+            this.TopMost = false;
             this.TransparencyKey = System.Drawing.Color.Magenta;
             ((System.ComponentModel.ISupportInitialize)(this.closeWindowButton)).EndInit();
             this.ResumeLayout(false);

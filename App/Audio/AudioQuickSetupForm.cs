@@ -100,7 +100,7 @@ internal sealed class AudioQuickSetupForm : System.Windows.Forms.Form
         string[] peers = MachineStuff.MachineMatrix.Where(n => !string.IsNullOrWhiteSpace(n)
             && !string.Equals(n, Common.MachineName, StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         using var form = new AudioQuickSetupForm(peers, pending);
-        form.ShowDialog(owner);
+        DialogWindows.Show(form, owner);
     }
 
     internal static void ResumePending(IWin32Window owner)

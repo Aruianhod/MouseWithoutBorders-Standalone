@@ -1,3 +1,13 @@
+# Standalone 0.102.2933.8 — dialog ownership and administrator restart
+
+- Remove always-on-top from settings and pairing windows. Give tray dialogs a visible owner,
+  and preserve nested audio setup ownership; never use the hidden input overlay as owner.
+- Add explicit administrator restart to tray and software update settings using Windows runas.
+  Keep the original process on consent cancellation, failed launch or readiness timeout.
+  Validate same user, parent process path/start time and wait for parent exit before initialization.
+- Preserve pairing/settings. No service mode, secure desktop support or automatic elevation.
+- Add native modal ownership tests and elevation handoff readiness/failure tests.
+
 # Standalone 0.102.2933.7 — shared-folder updates and file drop window
 
 - Add pinned RSA-signed LAN update feed, bounded downloads, ZIP and version validation,

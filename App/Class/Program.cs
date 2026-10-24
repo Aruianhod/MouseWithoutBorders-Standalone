@@ -82,6 +82,11 @@ namespace MouseWithoutBorders.Class
             try
             {
                 string[] args = Environment.GetCommandLineArgs();
+                if (args.Length > 1 && args[1] == ElevationRestart.Switch)
+                {
+                    ElevationRestart.PrepareElevatedStartup(args);
+                    args = new[] { args[0] };
+                }
 
                 string firstArg = string.Empty;
                 if (args.Length > 1 && args[1] != null)

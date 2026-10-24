@@ -52,24 +52,29 @@ namespace MouseWithoutBorders
             InitializeComponent();
             var audioPage = new TabPage("声音与麦克风");
             var audioButton = new Button { Text = "配置声音与麦克风共享…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
-            audioButton.Click += (_, _) => { using var audioSettings = new Audio.AudioSettingsForm(); audioSettings.ShowDialog(this); };
+            audioButton.Click += (_, _) => { using var audioSettings = new Audio.AudioSettingsForm(); DialogWindows.Show(audioSettings, this); };
             audioPage.Controls.Add(audioButton);
             audioPage.Controls.Add(new Label { Text = "独立配置系统声音、麦克风的发送与接收。\r\n复用现有配对关系；首次使用默认关闭。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
             tabControlSetting.TabPages.Add(audioPage);
             var updatePage = new TabPage("软件更新");
             var updateButton = new Button { Text = "检查更新…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
-            updateButton.Click += (_, _) => { using var updates = new Updates.UpdateForm(); updates.ShowDialog(this); };
+            updateButton.Click += (_, _) => { using var updates = new Updates.UpdateForm(); DialogWindows.Show(updates, this); };
             updatePage.Controls.Add(updateButton);
             updatePage.Controls.Add(new Label { Text = "从共享文件夹获取新版，确认后自动下载、替换并重启。\r\n保留配对、电脑记忆和音频设置。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
             tabControlSetting.TabPages.Add(updatePage);
             var filePage = new TabPage("文件传输");
             var fileButton = new Button { Text = "拖拽传文件…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
-            fileButton.Click += (_, _) => { using var files = new Files.FileTransferForm(); files.ShowDialog(this); };
+            fileButton.Click += (_, _) => { using var files = new Files.FileTransferForm(); DialogWindows.Show(files, this); };
             filePage.Controls.Add(fileButton);
             filePage.Controls.Add(new Label { Text = "选择已连接电脑，将文件拖入窗口即可发送。\r\n支持多文件、取消及完整性校验，同名自动改名。", AutoSize = true, Location = new System.Drawing.Point(24, 72) });
             tabControlSetting.TabPages.Add(filePage);
 
             textBoxEnc.Font = new System.Drawing.Font(Control.DefaultFont.Name, 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+
+            var elevateButton = new Button { Text = ElevationRestart.IsElevated ? "已以管理员身份运行" : "以管理员身份重新启动…", Enabled = !ElevationRestart.IsElevated, AutoSize = true, Location = new Point(24, 148) };
+            elevateButton.Click += async (_, _) => { elevateButton.Enabled = false; try { await ElevationRestart.RestartAsync(this); } finally { if (!elevateButton.IsDisposed) elevateButton.Enabled = !ElevationRestart.IsElevated; } };
+            updatePage.Controls.Add(elevateButton);
+            updatePage.Controls.Add(new Label { Text = "用于控制本机上的管理员窗口，需在被控制的电脑上启用。\r\n由 Windows 请求授权；取消后保持当前连接。配对与设置保留。\r\n不包含服务模式，不能控制 UAC 安全桌面或登录界面。", AutoSize = true, Location = new Point(24, 196) });
 
             Text = Application.ProductName + " " + Application.ProductVersion + " - 设置";
             toolTip.ToolTipTitle = Application.ProductName;

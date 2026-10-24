@@ -1092,7 +1092,7 @@ namespace MouseWithoutBorders
             this.Name = "frmMatrix";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Mouse Without Borders - Settings";
-            this.TopMost = true;
+            this.TopMost = false;
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FrmMatrix_FormClosed);
             this.Load += new System.EventHandler(this.FrmMatrix_Load);
             this.Shown += new System.EventHandler(this.FrmMatrix_Shown);
