@@ -2,12 +2,12 @@
   "upstream": "https://github.com/microsoft/PowerToys",
   "tag": "v0.102.2933.0",
   "commit": "9673c84ffac3bcc55e75fbecaedcda9e7d698530",
-  "standaloneVersion": "0.102.2933.19",
+  "standaloneVersion": "0.102.2933.20",
   "driverPackage": "original VB-CABLE Pack45; see Drivers/VB-CABLE-NOTICE.txt for separate license and hashes",
   "audioStatus": "experimental; automated discontinuity regressions and local WASAPI capture/playback smoke passed; two-computer listening verification pending",
   "target": "win-x64",
   "sdk": "10.0.402",
   "runtime": "10.0.13",
-  "date": "2026-10-27",
+  "date": "2026-10-28",
   "publicRebuild": "Current public source build; no private LAN update default; normalized source paths. Historical .1-.17 snapshots were published retrospectively."
 }

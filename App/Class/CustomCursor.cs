@@ -70,7 +70,7 @@ namespace MouseWithoutBorders.Class
 
         internal static void ShowFakeMouseCursor(int x, int y)
         {
-            if (Setting.Values.DrawMouse && !GameMouseMode.LocalCaptured)
+            if (Setting.Values.DrawMouse && !GameMouseMode.SuppressSharedCursor)
             {
                 ci.cbSize = Marshal.SizeOf(typeof(NativeMethods.CURSORINFO));
                 _ = NativeMethods.GetCursorInfo(out ci);
@@ -82,7 +82,7 @@ namespace MouseWithoutBorders.Class
                         () =>
                     {
                         // Capture may begin after this callback was queued.
-                        if (GameMouseMode.LocalCaptured)
+                        if (GameMouseMode.SuppressSharedCursor)
                         {
                             Common.MouseCursorForm?.Hide();
                             return;

@@ -10,6 +10,39 @@ namespace MouseWithoutBorders.UnitTests;
 [TestClass][DoNotParallelize]
 public sealed class WindowAndElevationTests
 {
+    private sealed class CursorProbe : FrmMouseCursor
+    {
+        internal bool DoesNotActivate => ShowWithoutActivation;
+        internal int ExtendedStyle => CreateParams.ExStyle;
+        internal IntPtr MouseActivateResult()
+        {
+            var message = Forms.Message.Create(IntPtr.Zero, 0x21, IntPtr.Zero, IntPtr.Zero);
+            WndProc(ref message);
+            return message.Result;
+        }
+    }
+
+    [TestMethod]
+    public void SharedCursorCannotTakeGameFocusOnShowOrMouseActivation()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var cursor = new CursorProbe();
+                Assert.IsTrue(cursor.DoesNotActivate, "Showing the shared cursor must not activate a window above the game.");
+                Assert.AreEqual(0x08000000, cursor.ExtendedStyle & 0x08000000, "WS_EX_NOACTIVATE");
+                Assert.AreEqual(0x20, cursor.ExtendedStyle & 0x20, "The overlay must let mouse input through.");
+                Assert.AreEqual((IntPtr)3, cursor.MouseActivateResult(), "Hover/click activation must also be rejected.");
+            }
+            catch (Exception ex) { failure = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA); thread.IsBackground = true; thread.Start();
+        Assert.IsTrue(thread.Join(TimeSpan.FromSeconds(5)));
+        if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool IsWindowEnabled(IntPtr window);

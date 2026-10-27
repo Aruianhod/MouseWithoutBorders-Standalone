@@ -50,6 +50,7 @@ internal sealed class RemoteGameMouseState
     private long seen;
     private Point? restore;
     internal long Seen => seen;
+    internal bool LastReportedActive => active;
 
     internal bool Update(bool next, uint serial, Point position, long now)
     {
@@ -84,13 +85,31 @@ internal static class GameMouseMode
 {
     internal const int WireMagic = 0x474D0100;
     private static readonly object Gate = new();
+    private static readonly object ProbeGate = new();
     private static readonly Dictionary<ID, (TcpSk Connection, RemoteGameMouseState State)> Peers = new();
     private static readonly GameCaptureTracker Tracker = new();
     private static System.Windows.Forms.Timer timer;
     private static volatile bool localCaptured;
     private static long lastSent;
     private static bool advertised;
+    private static string lastRemoteTransition = "尚未收到对面游戏状态（两端需 .19 或更新）";
     internal static bool LocalCaptured => localCaptured;
+
+    internal static bool IsIntentionallyHidden(bool succeeded, int flags, IntPtr cursor) =>
+        succeeded && (flags == 0 || (flags == 1 && cursor == IntPtr.Zero));
+
+    internal static bool SuppressSharedCursor
+    {
+        get
+        {
+            if (LocalCaptured) return true;
+            if (!Setting.Values.AutomaticGameMouse) return false;
+            var info = new NativeMethods.CURSORINFO { cbSize = Marshal.SizeOf<NativeMethods.CURSORINFO>() };
+            // Respect intentional hiding even before (or without) a clip rectangle.
+            // CURSOR_SUPPRESSED (touch / no physical mouse) keeps the desktop fallback.
+            return IsIntentionallyHidden(ReadCursorInfo(ref info), info.flags, info.hCursor);
+        }
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Rect { internal int Left, Top, Right, Bottom; internal Rectangle Bounds => Rectangle.FromLTRB(Left, Top, Right, Bottom); }
@@ -114,27 +133,37 @@ internal static class GameMouseMode
         lock (Gate) Peers.Clear();
     }
 
-    private static void Poll()
+    internal static (IntPtr Window, bool Captured) RefreshLocalCapture()
     {
-        try
+        // Also called before incoming input, so the first event cannot overwrite
+        // the game's hidden/locked cursor during the UI timer's 50 ms interval.
+        lock (ProbeGate)
         {
-            long now = Environment.TickCount64;
             var window = NativeMethods.GetForegroundWindow();
             var info = new NativeMethods.CURSORINFO { cbSize = Marshal.SizeOf<NativeMethods.CURSORINFO>() };
             bool candidate = false;
             Point origin = default;
             GetWindowThreadProcessId(window, out uint process);
             if (Setting.Values.AutomaticGameMouse && window != IntPtr.Zero && window != NativeMethods.GetDesktopWindow() && window != NativeMethods.GetShellWindow()
-                && process != Environment.ProcessId && ReadCursorInfo(ref info) && (info.flags == 0 || (info.flags == 1 && info.hCursor == IntPtr.Zero))
+                && process != Environment.ProcessId && IsIntentionallyHidden(ReadCursorInfo(ref info), info.flags, info.hCursor)
                 && GetClipCursor(out var clip) && GetClientRect(window, out var client) && ClientToScreen(window, ref origin))
             {
                 var bounds = client.Bounds; bounds.Offset(origin);
                 candidate = GameCaptureTracker.IsCaptured(true, clip.Bounds, SystemInformation.VirtualScreen, bounds);
             }
-            bool wasCaptured = localCaptured;
             localCaptured = candidate;
-            if (candidate && !wasCaptured) CustomCursor.ShowFakeMouseCursor(int.MinValue, int.MinValue);
-            bool active = Tracker.Observe(window, candidate, now);
+            return (window, candidate);
+        }
+    }
+
+    private static void Poll()
+    {
+        try
+        {
+            long now = Environment.TickCount64;
+            var observed = RefreshLocalCapture();
+            if (SuppressSharedCursor && Common.MouseCursorForm != null) CustomCursor.ShowFakeMouseCursor(int.MinValue, int.MinValue);
+            bool active = Tracker.Observe(observed.Window, observed.Captured, now);
             if (active != advertised || now - lastSent >= 250)
             {
                 if (active != advertised) Logger.Log("Automatic game mouse: " + (active ? "relative / captured" : "desktop restored"));
@@ -169,7 +198,8 @@ internal static class GameMouseMode
         if (tcp == null || !ValidPacket(packet, Common.MachineID, (ID)tcp.MachineId, tcp.Status == SocketStatus.Connected)) return;
         lock (Gate)
         {
-            if (!Peers.TryGetValue(packet.Src, out var peer))
+            bool known = Peers.TryGetValue(packet.Src, out var peer);
+            if (!known)
             {
                 if (Peers.Count >= 16)
                 {
@@ -180,8 +210,17 @@ internal static class GameMouseMode
                 peer = (tcp, new());
             }
             // Both authenticated directions may carry the same state; retain ordering.
-            if (peer.State.Update((packet.Md.dwFlags & 1) != 0, unchecked((uint)packet.Md.WheelDelta), new(packet.Md.X, packet.Md.Y), Environment.TickCount64))
+            bool wasActive = peer.State.LastReportedActive;
+            bool next = (packet.Md.dwFlags & 1) != 0;
+            if (peer.State.Update(next, unchecked((uint)packet.Md.WheelDelta), new(packet.Md.X, packet.Md.Y), Environment.TickCount64))
+            {
                 Peers[packet.Src] = (tcp, peer.State);
+                if (!known || wasActive != next)
+                {
+                    lastRemoteTransition = $"对面最近状态：{(next ? "进入游戏模式" : "恢复桌面模式")}（{DateTime.Now:HH:mm:ss}）";
+                    Logger.Log($"Remote game mouse: peer {(uint)packet.Src}, {(next ? "captured / relative" : "desktop")}");
+                }
+            }
         }
     }
 
@@ -198,6 +237,8 @@ internal static class GameMouseMode
         : LocalCaptured ? "本机：检测到隐藏并限制光标；游戏模式"
         : RemoteCaptured(Common.DesMachineID) ? "当前控制的电脑：游戏模式（相对移动，暂停鼠标跨屏）"
         : "桌面模式：等待游戏锁定鼠标";
+
+    internal static string RecentRemoteStatus { get { lock (Gate) return lastRemoteTransition; } }
 
     internal static Point? TakeRestore(ID target)
     {

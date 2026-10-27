@@ -149,6 +149,7 @@ internal static class Receiver
                         return;
                     }
 
+                    _ = GameMouseMode.RefreshLocalCapture();
                     if (Math.Abs(package.Md.X) >= Event.MOVE_MOUSE_RELATIVE && Math.Abs(package.Md.Y) >= Event.MOVE_MOUSE_RELATIVE)
                     {
                         if (package.Md.dwFlags == WM.WM_MOUSEMOVE)

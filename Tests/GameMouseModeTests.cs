@@ -11,6 +11,16 @@ namespace MouseWithoutBorders.UnitTests;
 public sealed class GameMouseModeTests
 {
     [TestMethod]
+    public void IntentionallyHiddenCursorDoesNotNeedAClipRectangleToBeRespected()
+    {
+        Assert.IsTrue(GameMouseMode.IsIntentionallyHidden(true, 0, (IntPtr)123));
+        Assert.IsTrue(GameMouseMode.IsIntentionallyHidden(true, 1, IntPtr.Zero));
+        Assert.IsFalse(GameMouseMode.IsIntentionallyHidden(true, 1, (IntPtr)123));
+        Assert.IsFalse(GameMouseMode.IsIntentionallyHidden(true, 2, IntPtr.Zero), "Keep the fallback for Windows cursor suppression when no physical mouse is attached.");
+        Assert.IsFalse(GameMouseMode.IsIntentionallyHidden(false, 0, IntPtr.Zero), "A failed Win32 query must not be treated as a game hiding the cursor.");
+    }
+
+    [TestMethod]
     public void AuthenticatedPeerOverridesOnlyCurrentTargetWithoutChangingSyncedPreferences()
     {
         var settings = Setting.Values;

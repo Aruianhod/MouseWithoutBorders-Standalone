@@ -1,3 +1,12 @@
+# Standalone 0.102.2933.20 — game cursor focus and input timing
+
+- Make the shared cursor a nonactivating overlay, including show, click/hover activation, and transparent/tool-window styles. Its previous normal-window activation behavior could make a game lose focus and release capture.
+- In automatic mode, respect intentional application cursor hiding even without a detected clip rectangle. Preserve the desktop fallback for Windows CURSOR_SUPPRESSED; never manipulate another application's ShowCursor counter.
+- Probe foreground cursor capture immediately before received mouse input, closing the UI timer's first-event gap. Use native input while respecting a hidden cursor, including the period before game-mode negotiation completes.
+- Record authenticated remote capture/desktop transitions and display the latest transition in the settings page, so inspecting the UI after Alt+Tab does not lose all evidence of the preceding mode.
+- Validation: new overlay activation regression failed on .19 and passed after the fix. Full suite: 240 total, 239 passed, 0 failed, 1 pre-existing skip. Added intentional hiding versus OS suppression/API-failure cases. Actual two-PC Zenless Zone Zero camera/cursor behavior remains unverified; this release fixes identified code defects and does not claim complete game compatibility.
+- Update both computers to .20 for this fix. Input injection and fullscreen-detection limitations remain unchanged.
+
 # Standalone 0.102.2933.19 — automatic game mouse mode
 
 - Detect foreground cursor hiding and clipping, debounce capture entry, and release immediately when the cursor is visible or focus changes. Single-monitor hidden fullscreen is a heuristic; a settings toggle and live status allow opting out of false positives.
