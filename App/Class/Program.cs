@@ -271,10 +271,11 @@ namespace MouseWithoutBorders.Class
                 var formScreen = new FrmScreen();
                 Audio.AudioService.Instance.Start();
                 formScreen.Shown += (_, _) => Sync.SyncService.Start(formScreen);
+                formScreen.Shown += (_, _) => GameMouseMode.Start();
                 formScreen.Shown += (_, _) => Updates.UpdateClient.StartNotifications(formScreen.NotifyIcon);
                 formScreen.Shown += (_, _) => formScreen.BeginInvoke(new Action(() => Audio.AudioQuickSetupForm.ResumePending(formScreen)));
                 try { Application.Run(formScreen); }
-                finally { Sync.SyncService.Stop(); Audio.AudioService.Instance.Stop(); }
+                finally { GameMouseMode.Stop(); Sync.SyncService.Stop(); Audio.AudioService.Instance.Stop(); }
 
                 
             }

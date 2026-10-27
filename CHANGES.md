@@ -1,3 +1,12 @@
+# Standalone 0.102.2933.19 — automatic game mouse mode
+
+- Detect foreground cursor hiding and clipping, debounce capture entry, and release immediately when the cursor is visible or focus changes. Single-monitor hidden fullscreen is a heuristic; a settings toggle and live status allow opting out of false positives.
+- Extend the existing authenticated capability frame with bounded, ordered, expiring game state and normalized cursor position. Older peers ignore the optional payload; both PCs need .19 for automatic coordination.
+- Temporarily send relative motion, suppress synthetic cursor overlays, and prevent edge switching during capture. Preserve saved desktop preferences and explicit machine-switch hotkeys. Captured movement uses native SendInput instead of WinRT pointer injection.
+- Rebase desktop coordinates to the remote cursor on exit; restore safely on disconnect or a missing heartbeat. Drop queued absolute moves during capture negotiation instead of warping the game camera.
+- Add a default-enabled game mouse setting with bidirectional preference sync; old settings snapshots leave the new preference unchanged. Runtime game state is never persisted as a preference.
+- Validation: 238 tests total, 237 passed, 0 failed, 1 pre-existing skip. Added detection, focus/menu debounce, expiry/disconnect, reordered/wrapped sequence, payload validation, multi-monitor coordinates, preference isolation and old-peer compatibility cases. Real two-PC game behavior remains to be verified; this does not provide hardware Raw Input emulation or anti-cheat bypass.
+
 ﻿# Standalone 0.102.2933.18 — smooth audio gaps in both latency modes
 
 - Preserve the last output sample per channel and apply a stateful 5 ms transition at empty/partial underruns, resume and receive queue trims. Progress survives small output reads; uninterrupted PCM remains unchanged after startup.

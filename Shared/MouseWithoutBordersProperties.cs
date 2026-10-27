@@ -75,6 +75,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
         public bool MoveMouseRelatively { get; set; }
 
+        public bool AutomaticGameMouse { get; set; } = true;
+
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
         public bool BlockMouseAtScreenCorners { get; set; }
 

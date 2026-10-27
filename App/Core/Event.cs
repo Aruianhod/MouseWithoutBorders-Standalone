@@ -70,7 +70,7 @@ internal static class Event
             // Check if easy mouse setting is enabled.
             bool isEasyMouseEnabled = IsSwitchingByMouseEnabled();
 
-            if (isEasyMouseEnabled && Common.Sk != null && (Common.DesMachineID == Common.MachineID || !Setting.Values.MoveMouseRelatively) && e.dwFlags == WM.WM_MOUSEMOVE)
+            if (isEasyMouseEnabled && Common.Sk != null && (Common.DesMachineID == Common.MachineID || !GameMouseMode.UseRelative) && e.dwFlags == WM.WM_MOUSEMOVE)
             {
                 Point p = MachineStuff.MoveToMyNeighbourIfNeeded(e.X, e.Y, MachineStuff.desMachineID);
 
@@ -102,7 +102,7 @@ internal static class Event
                 MousePackage.Md.WheelDelta = e.WheelDelta;
 
                 // Relative move
-                if (Setting.Values.MoveMouseRelatively && Math.Abs(dx) >= MOVE_MOUSE_RELATIVE && Math.Abs(dy) >= MOVE_MOUSE_RELATIVE)
+                if (GameMouseMode.UseRelative && Math.Abs(dx) >= MOVE_MOUSE_RELATIVE && Math.Abs(dy) >= MOVE_MOUSE_RELATIVE)
                 {
                     MousePackage.Md.X = dx;
                     MousePackage.Md.Y = dy;
@@ -146,7 +146,7 @@ internal static class Event
 
     internal static bool IsSwitchingByMouseEnabled()
     {
-        return (EasyMouseOption)Setting.Values.EasyMouse == EasyMouseOption.Enable || InputHook.EasyMouseKeyDown;
+        return !GameMouseMode.BlockEdgeSwitch && ((EasyMouseOption)Setting.Values.EasyMouse == EasyMouseOption.Enable || InputHook.EasyMouseKeyDown);
     }
 
     internal static void PrepareToSwitchToMachine(ID newDesMachineID, Point desMachineXY)

@@ -94,6 +94,7 @@ internal static class Receiver
         {
             case PackageType.SettingsCapability:
                 Sync.SyncService.OnCapabilities(package, tcp);
+                GameMouseMode.Receive(package, tcp);
                 break;
 
             case PackageType.Keyboard:
@@ -157,7 +158,8 @@ internal static class Receiver
                                 package.Md.Y < 0 ? package.Md.Y + Event.MOVE_MOUSE_RELATIVE : package.Md.Y - Event.MOVE_MOUSE_RELATIVE);
                             _ = NativeMethods.GetCursorPos(ref lastXY);
 
-                            Point p = MachineStuff.MoveToMyNeighbourIfNeeded(lastXY.X, lastXY.Y, Common.MachineID);
+                            Point p = !GameMouseMode.LocalCaptured && Common.IsEasyMouseSwitchAllowed()
+                                ? MachineStuff.MoveToMyNeighbourIfNeeded(lastXY.X, lastXY.Y, Common.MachineID) : Point.Empty;
 
                             if (!p.IsEmpty)
                             {
@@ -183,7 +185,9 @@ internal static class Receiver
                     }
                     else
                     {
-                        _ = InputSimulation.SendMouse(package.Md);
+                        // During mode negotiation, don't warp a captured game with queued desktop coordinates.
+                        if (!GameMouseMode.LocalCaptured || package.Md.dwFlags != WM.WM_MOUSEMOVE)
+                            _ = InputSimulation.SendMouse(package.Md);
                         _ = NativeMethods.GetCursorPos(ref lastXY);
                     }
 

@@ -712,6 +712,12 @@ namespace MouseWithoutBorders.Class
         [JsonIgnore]
         internal bool BlockScreenSaverIsGpoConfigured => GPOWrapper.GetConfiguredMwbDisallowBlockingScreensaverValue() == GpoRuleConfigured.Enabled;
 
+        internal bool AutomaticGameMouse
+        {
+            get { lock (_loadingSettingsLock) return _properties.AutomaticGameMouse; }
+            set { lock (_loadingSettingsLock) _properties.AutomaticGameMouse = value; }
+        }
+
         internal bool MoveMouseRelatively
         {
             get

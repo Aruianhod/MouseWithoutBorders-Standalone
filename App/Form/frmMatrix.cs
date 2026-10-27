@@ -50,6 +50,22 @@ namespace MouseWithoutBorders
         internal FrmMatrix()
         {
             InitializeComponent();
+            var gamePage = new TabPage("游戏鼠标");
+            var automaticGame = new CheckBox { Text = "自动识别游戏锁定鼠标（两端需 .19 或更新）", AutoSize = true, Location = new Point(24, 24), Checked = Setting.Values.AutomaticGameMouse };
+            automaticGame.CheckedChanged += (_, _) => { Setting.Values.AutomaticGameMouse = automaticGame.Checked; Setting.Values.SaveSettings(); };
+            gamePage.Controls.Add(automaticGame);
+            gamePage.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(600, 0), Location = new Point(24, 64), Text =
+                "检测到前台程序隐藏并限制光标时，临时使用相对移动、隐藏共享光标并暂停鼠标跨屏。\r\n退出锁定或切出游戏后恢复原来的桌面设置，不改动已保存的相对移动选项。\r\n\r\n全屏隐藏光标采用启发式识别；若播放器等程序被误判，可关闭此选项。\r\n部分仅接受原始设备输入的游戏仍可能不兼容。\r\n\r\n紧急切回：Ctrl+Alt+F1～F4（默认快捷键，对应电脑排列）。" });
+            var gameStatus = new Label { AutoSize = true, Location = new Point(24, 290) };
+            gamePage.Controls.Add(gameStatus);
+            var gameTimer = new Timer(components) { Interval = 500 };
+            gameTimer.Tick += (_, _) =>
+            {
+                gameStatus.Text = GameMouseMode.Status;
+                if (automaticGame.Checked != Setting.Values.AutomaticGameMouse) automaticGame.Checked = Setting.Values.AutomaticGameMouse;
+            };
+            gameTimer.Start();
+            tabControlSetting.TabPages.Add(gamePage);
             var audioPage = new TabPage("声音与麦克风");
             var audioButton = new Button { Text = "配置声音与麦克风共享…", AutoSize = true, Location = new System.Drawing.Point(24, 24) };
             audioButton.Click += (_, _) => { using var audioSettings = new Audio.AudioSettingsForm(); DialogWindows.Show(audioSettings, this); };

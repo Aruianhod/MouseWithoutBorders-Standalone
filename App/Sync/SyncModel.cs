@@ -28,6 +28,7 @@ internal sealed class SharedSettings
     public bool Fullscreen { get; set; }
     public int EasyMouse { get; set; }
     public bool RelativeMouse { get; set; }
+    public bool? AutomaticGameMouse { get; set; }
     public bool DrawMouse { get; set; }
     public bool HideMouse { get; set; }
     public bool OneRow { get; set; }
@@ -44,6 +45,7 @@ internal sealed class SharedSettings
         Clipboard = Setting.Values.ShareClipboard, Files = Setting.Values.TransferFile,
         Wrap = Setting.Values.MatrixCircle, Corners = Setting.Values.BlockMouseAtCorners,
         Fullscreen = Setting.Values.DisableEasyMouseWhenForegroundWindowIsFullscreen, EasyMouse = Setting.Values.EasyMouse,
+        AutomaticGameMouse = Setting.Values.AutomaticGameMouse,
         RelativeMouse = Setting.Values.MoveMouseRelatively, DrawMouse = Setting.Values.DrawMouse, HideMouse = Setting.Values.HideMouse,
         OneRow = Setting.Values.MatrixOneRow, Layout = Setting.Values.MachineMatrixString.Split(','),
     };
@@ -58,6 +60,7 @@ internal sealed class SharedSettings
             settings.ShareClipboard = Clipboard; settings.TransferFile = Files;
             settings.MatrixCircle = Wrap; settings.BlockMouseAtCorners = Corners;
             settings.DisableEasyMouseWhenForegroundWindowIsFullscreen = Fullscreen; settings.EasyMouse = EasyMouse;
+            if (AutomaticGameMouse.HasValue) settings.AutomaticGameMouse = AutomaticGameMouse.Value;
             settings.MoveMouseRelatively = RelativeMouse; settings.DrawMouse = DrawMouse; settings.HideMouse = HideMouse;
             if (Layout.Contains(Common.MachineName, StringComparer.OrdinalIgnoreCase) && Layout.Contains(peer, StringComparer.OrdinalIgnoreCase))
             { settings.MachineMatrixString = string.Join(',', Layout); settings.MatrixOneRow = OneRow; MachineStuff.MachineMatrix = null; }

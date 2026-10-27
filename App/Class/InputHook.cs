@@ -268,6 +268,8 @@ namespace MouseWithoutBorders.Class
                             if (MachineStuff.SwitchLocation.Count > 0 && MachineStuff.NewDesMachineID != Common.MachineID && MachineStuff.NewDesMachineID != ID.ALL)
                             {
                                 MachineStuff.SwitchLocation.Count--;
+                                // Explicit hotkey/edge entry takes precedence over an old game-exit position.
+                                _ = GameMouseMode.TakeRestore(MachineStuff.NewDesMachineID);
 
                                 if (MachineStuff.SwitchLocation.X > Event.XY_BY_PIXEL - 100000 || MachineStuff.SwitchLocation.Y > Event.XY_BY_PIXEL - 100000)
                                 {
@@ -284,6 +286,12 @@ namespace MouseWithoutBorders.Class
                             }
                             else
                             {
+                                var restored = GameMouseMode.TakeRestore(MachineStuff.NewDesMachineID);
+                                if (restored.HasValue)
+                                {
+                                    hookCallbackMouseData.X = (int)((long)restored.Value.X * Common.ScreenWidth / 65535) + MachineStuff.PrimaryScreenBounds.Left;
+                                    hookCallbackMouseData.Y = (int)((long)restored.Value.Y * Common.ScreenHeight / 65535) + MachineStuff.PrimaryScreenBounds.Top;
+                                }
                                 dx = mouseHookStruct.Pt.x - Common.LastPos.X;
                                 dy = mouseHookStruct.Pt.y - Common.LastPos.Y;
 

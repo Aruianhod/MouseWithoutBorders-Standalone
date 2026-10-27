@@ -79,7 +79,7 @@ namespace MouseWithoutBorders.Class
                     input64.mi.dwExtraInfo = input.mi.dwExtraInfo;
                 }
 
-                if (input.type == 0 && (input.mi.dwFlags & (int)NativeMethods.MOUSEEVENTF.MOVE) != 0 && NativeMethods.InjectMouseInputAvailable)
+                if (input.type == 0 && (input.mi.dwFlags & (int)NativeMethods.MOUSEEVENTF.MOVE) != 0 && NativeMethods.InjectMouseInputAvailable && !GameMouseMode.LocalCaptured)
                 {
                     Injector.InjectMouseInput(new[] { MouseInputToInjectedInputMouseInfo(input64.mi) });
                 }
@@ -91,7 +91,7 @@ namespace MouseWithoutBorders.Class
             }
             else
             {
-                if (input.type == 0 && (input.mi.dwFlags & (int)NativeMethods.MOUSEEVENTF.MOVE) != 0 && NativeMethods.InjectMouseInputAvailable)
+                if (input.type == 0 && (input.mi.dwFlags & (int)NativeMethods.MOUSEEVENTF.MOVE) != 0 && NativeMethods.InjectMouseInputAvailable && !GameMouseMode.LocalCaptured)
                 {
                     Injector.InjectMouseInput(new[] { MouseInputToInjectedInputMouseInfo(input.mi) });
                 }
