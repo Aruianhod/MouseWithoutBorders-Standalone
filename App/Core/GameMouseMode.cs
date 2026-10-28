@@ -102,8 +102,10 @@ internal static class GameMouseMode
     {
         get
         {
-            if (LocalCaptured) return true;
             if (!Setting.Values.AutomaticGameMouse) return false;
+            // A background game's hidden cursor must not hide the desktop fallback.
+            if (!ForegroundMousePolicy.IsApplication(NativeMethods.GetForegroundWindow())) return false;
+            if (LocalCaptured) return true;
             var info = new NativeMethods.CURSORINFO { cbSize = Marshal.SizeOf<NativeMethods.CURSORINFO>() };
             // Respect intentional hiding even before (or without) a clip rectangle.
             // CURSOR_SUPPRESSED (touch / no physical mouse) keeps the desktop fallback.
@@ -144,12 +146,13 @@ internal static class GameMouseMode
             bool candidate = false;
             Point origin = default;
             GetWindowThreadProcessId(window, out uint process);
-            if (Setting.Values.AutomaticGameMouse && window != IntPtr.Zero && window != NativeMethods.GetDesktopWindow() && window != NativeMethods.GetShellWindow()
+            if (Setting.Values.AutomaticGameMouse && ForegroundMousePolicy.IsApplication(window)
                 && process != Environment.ProcessId && IsIntentionallyHidden(ReadCursorInfo(ref info), info.flags, info.hCursor)
                 && GetClipCursor(out var clip) && GetClientRect(window, out var client) && ClientToScreen(window, ref origin))
             {
                 var bounds = client.Bounds; bounds.Offset(origin);
-                candidate = GameCaptureTracker.IsCaptured(true, clip.Bounds, SystemInformation.VirtualScreen, bounds);
+                candidate = GameCaptureTracker.IsCaptured(true, clip.Bounds, SystemInformation.VirtualScreen, bounds)
+                    && window == NativeMethods.GetForegroundWindow();
             }
             localCaptured = candidate;
             return (window, candidate);

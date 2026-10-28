@@ -1,3 +1,11 @@
+# Standalone 0.102.2933.21 — background game crossing policy
+
+- Exclude desktop/taskbar/task-switch surfaces (including WorkerW), minimized, invisible and DWM-cloaked windows from automatic game capture. Recheck foreground identity after sampling to avoid attributing a stale clip to a new foreground window.
+- Do not suppress the desktop's fallback cursor just because a background application left global hidden-cursor state behind.
+- Check the actual foreground client rectangle against its monitor for the optional fullscreen crossing guard. The desktop-wide notification state no longer makes a background fullscreen game block crossing from another window.
+- Clarify that the existing relative-movement checkbox applies on the desktop too; leave it off when only automatic game-relative movement is desired. Saved user preferences are not globally migrated by this release.
+- Regression coverage includes WorkerW plus stale fullscreen clip, Win+D focus loss, minimized/cloaked games, maximized/windowed foreground applications, and negative monitor coordinates. Actual two-PC background-game crossing requires user verification.
+
 # Standalone 0.102.2933.20 — game cursor focus and input timing
 
 - Make the shared cursor a nonactivating overlay, including show, click/hover activation, and transparent/tool-window styles. Its previous normal-window activation behavior could make a game lose focus and release capture.

@@ -1603,40 +1603,11 @@ internal static class Common
 
     private static bool IsEasyMouseBlockedByFullscreenWindow()
     {
-        var shellHandle = NativeMethods.GetShellWindow();
-        var desktopHandle = NativeMethods.GetDesktopWindow();
-        var foregroundHandle = NativeMethods.GetForegroundWindow();
-
-        // If the foreground window is either the desktop or the Windows shell, we are not in fullscreen mode.
-        if (foregroundHandle.Equals(shellHandle) || foregroundHandle.Equals(desktopHandle))
-        {
-            return false;
-        }
-
-        if (NativeMethods.SHQueryUserNotificationState(out var userNotificationState) != 0)
-        {
-            Logger.LogDebug($"SHQueryUserNotificationState failed with error : {Marshal.GetLastWin32Error()}");
-            return false;
-        }
-
-        switch (userNotificationState)
-        {
-            // An application running in full screen mode, check if the foreground window is
-            // listed as ignored in the settings.
-            case NativeMethods.USER_NOTIFICATION_STATE.BUSY:
-            case NativeMethods.USER_NOTIFICATION_STATE.RUNNING_D3D_FULL_SCREEN:
-            case NativeMethods.USER_NOTIFICATION_STATE.PRESENTATION_MODE:
-                return !IsAppIgnoredByEasyMouseFullscreenCheck(foregroundHandle);
-
-            // No full screen app running.
-            case NativeMethods.USER_NOTIFICATION_STATE.NOT_PRESENT:
-            case NativeMethods.USER_NOTIFICATION_STATE.ACCEPTS_NOTIFICATIONS:
-            case NativeMethods.USER_NOTIFICATION_STATE.QUIET_TIME:
-            // Cannot determine
-            case NativeMethods.USER_NOTIFICATION_STATE.APP:
-            default:
-                return false;
-        }
+        var foreground = NativeMethods.GetForegroundWindow();
+        // SHQueryUserNotificationState describes the whole desktop; a background
+        // game/presentation must not block a windowed foreground app or Explorer.
+        return ForegroundMousePolicy.IsForegroundFullscreen(foreground)
+            && !IsAppIgnoredByEasyMouseFullscreenCheck(foreground);
     }
 
     /// <summary>

@@ -9,7 +9,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>MouseWithoutBorders</RootNamespace>
-    <Version>0.102.2933.20</Version>
+    <Version>0.102.2933.21</Version>
     <Product>无界鼠标独立版</Product>
     <Company>Independent build from Microsoft PowerToys source</Company>
     <Copyright>Microsoft Corporation and standalone contributors. MIT License.</Copyright>
