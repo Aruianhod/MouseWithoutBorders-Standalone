@@ -84,14 +84,21 @@ internal sealed class RemoteGameMouseState
 internal static class GameMouseMode
 {
     internal const int WireMagic = 0x474D0100;
+    // Separate from captured/relative mode: a visible cursor in a fullscreen game
+    // still needs edge protection, without changing its input coordinates.
+    internal const int FullscreenWireMagic = 0x474D0200;
     private static readonly object Gate = new();
     private static readonly object ProbeGate = new();
     private static readonly Dictionary<ID, (TcpSk Connection, RemoteGameMouseState State)> Peers = new();
+    private static readonly Dictionary<ID, (TcpSk Connection, RemoteGameMouseState State)> FullscreenPeers = new();
     private static readonly GameCaptureTracker Tracker = new();
     private static System.Windows.Forms.Timer timer;
     private static volatile bool localCaptured;
     private static long lastSent;
     private static bool advertised;
+    private static long lastFullscreenSent;
+    private static bool advertisedFullscreen;
+    private static volatile bool localFullscreenBlocked;
     private static string lastRemoteTransition = "尚未收到对面游戏状态（两端需 .19 或更新）";
     internal static bool LocalCaptured => localCaptured;
 
@@ -132,7 +139,8 @@ internal static class GameMouseMode
     internal static void Stop()
     {
         timer?.Stop(); timer?.Dispose(); timer = null; localCaptured = false;
-        lock (Gate) Peers.Clear();
+        localFullscreenBlocked = false;
+        lock (Gate) { Peers.Clear(); FullscreenPeers.Clear(); }
     }
 
     internal static (IntPtr Window, bool Captured) RefreshLocalCapture()
@@ -164,6 +172,18 @@ internal static class GameMouseMode
         try
         {
             long now = Environment.TickCount64;
+            bool fullscreenBlocked = Common.IsForegroundFullscreenCrossingBlocked();
+            localFullscreenBlocked = fullscreenBlocked;
+            if (fullscreenBlocked != advertisedFullscreen || now - lastFullscreenSent >= 250)
+            {
+                if (fullscreenBlocked != advertisedFullscreen) Logger.Log("Local fullscreen guard: " + (fullscreenBlocked ? "blocked" : "released"));
+                advertisedFullscreen = fullscreenBlocked; lastFullscreenSent = now;
+                Common.SkSend(new DATA
+                {
+                    Type = PackageType.SettingsCapability, Src = Common.MachineID, Des = ID.ALL,
+                    Md = new MOUSEDATA { WheelDelta = unchecked((int)(uint)now), dwFlags = FullscreenWireMagic | (fullscreenBlocked ? 1 : 0) },
+                }, (uint)Common.MachineID, false);
+            }
             var observed = RefreshLocalCapture();
             if (SuppressSharedCursor && Common.MouseCursorForm != null) CustomCursor.ShowFakeMouseCursor(int.MinValue, int.MinValue);
             bool active = Tracker.Observe(observed.Window, observed.Captured, now);
@@ -183,7 +203,7 @@ internal static class GameMouseMode
                 }, (uint)Common.MachineID, false);
             }
         }
-        catch (Exception ex) { localCaptured = false; Logger.Log(ex); }
+        catch (Exception ex) { localCaptured = false; localFullscreenBlocked = false; Logger.Log(ex); }
     }
 
     internal static Point Normalize(Point point, Rectangle desktop) => new(
@@ -193,7 +213,8 @@ internal static class GameMouseMode
     internal static bool ValidPacket(DATA packet, ID local, ID peer, bool connected) =>
         connected && peer != ID.NONE && peer != ID.ALL && peer != local && packet.Src == peer
         && (packet.Des == local || packet.Des == ID.ALL) && packet.Type == PackageType.SettingsCapability
-        && (packet.Md.dwFlags == WireMagic || packet.Md.dwFlags == (WireMagic | 1))
+        && ((packet.Md.dwFlags & ~1) == WireMagic || (packet.Md.dwFlags & ~1) == FullscreenWireMagic)
+        && ((packet.Md.dwFlags & ~1) != FullscreenWireMagic || (packet.Md.X == 0 && packet.Md.Y == 0))
         && packet.Md.X >= 0 && packet.Md.X <= 65535 && packet.Md.Y >= 0 && packet.Md.Y <= 65535;
 
     internal static void Receive(DATA packet, TcpSk tcp)
@@ -201,14 +222,16 @@ internal static class GameMouseMode
         if (tcp == null || !ValidPacket(packet, Common.MachineID, (ID)tcp.MachineId, tcp.Status == SocketStatus.Connected)) return;
         lock (Gate)
         {
-            bool known = Peers.TryGetValue(packet.Src, out var peer);
+            bool fullscreen = (packet.Md.dwFlags & ~1) == FullscreenWireMagic;
+            var states = fullscreen ? FullscreenPeers : Peers;
+            bool known = states.TryGetValue(packet.Src, out var peer);
             if (!known)
             {
-                if (Peers.Count >= 16)
+                if (states.Count >= 16)
                 {
                     ID oldest = ID.NONE; long at = long.MaxValue;
-                    foreach (var item in Peers) if (item.Value.State.Seen < at) { oldest = item.Key; at = item.Value.State.Seen; }
-                    Peers.Remove(oldest);
+                    foreach (var item in states) if (item.Value.State.Seen < at) { oldest = item.Key; at = item.Value.State.Seen; }
+                    states.Remove(oldest);
                 }
                 peer = (tcp, new());
             }
@@ -217,11 +240,16 @@ internal static class GameMouseMode
             bool next = (packet.Md.dwFlags & 1) != 0;
             if (peer.State.Update(next, unchecked((uint)packet.Md.WheelDelta), new(packet.Md.X, packet.Md.Y), Environment.TickCount64))
             {
-                Peers[packet.Src] = (tcp, peer.State);
+                states[packet.Src] = (tcp, peer.State);
                 if (!known || wasActive != next)
                 {
-                    lastRemoteTransition = $"对面最近状态：{(next ? "进入游戏模式" : "恢复桌面模式")}（{DateTime.Now:HH:mm:ss}）";
-                    Logger.Log($"Remote game mouse: peer {(uint)packet.Src}, {(next ? "captured / relative" : "desktop")}");
+                    if (fullscreen)
+                        Logger.Log($"Remote fullscreen guard: peer {(uint)packet.Src}, {(next ? "blocked" : "released")}");
+                    else
+                    {
+                        lastRemoteTransition = $"对面最近状态：{(next ? "进入游戏模式" : "恢复桌面模式")}（{DateTime.Now:HH:mm:ss}）";
+                        Logger.Log($"Remote game mouse: peer {(uint)packet.Src}, {(next ? "captured / relative" : "desktop")}");
+                    }
                 }
             }
         }
@@ -234,7 +262,20 @@ internal static class GameMouseMode
     }
 
     internal static bool UseRelative => Setting.Values.MoveMouseRelatively || (Setting.Values.AutomaticGameMouse && RemoteCaptured(Common.DesMachineID));
-    internal static bool BlockEdgeSwitch => Setting.Values.AutomaticGameMouse && (Common.DesMachineID == Common.MachineID ? LocalCaptured : RemoteCaptured(Common.DesMachineID));
+    internal static bool RemoteFullscreenBlocked(ID target)
+    {
+        lock (Gate) return FullscreenPeers.TryGetValue(target, out var peer)
+            && peer.State.IsActive(Environment.TickCount64, peer.Connection.Status == SocketStatus.Connected);
+    }
+    internal static bool BlockEdgeSwitch =>
+        (Common.DesMachineID == Common.MachineID
+            ? Setting.Values.DisableEasyMouseWhenForegroundWindowIsFullscreen && localFullscreenBlocked
+            : RemoteFullscreenBlocked(Common.DesMachineID))
+        || (Setting.Values.AutomaticGameMouse && (Common.DesMachineID == Common.MachineID ? LocalCaptured : RemoteCaptured(Common.DesMachineID)));
+
+    internal static string FullscreenStatus => Common.DesMachineID == Common.MachineID
+        ? "本机全屏跨屏保护：" + (Setting.Values.DisableEasyMouseWhenForegroundWindowIsFullscreen ? (localFullscreenBlocked ? "生效中" : "已开启，当前未阻止") : "已关闭")
+        : "对面全屏跨屏保护：" + (RemoteFullscreenBlocked(Common.DesMachineID) ? "生效中" : "当前未阻止（两端需 .22 或更新）");
 
     internal static string Status => !Setting.Values.AutomaticGameMouse ? "自动识别已关闭"
         : LocalCaptured ? "本机：检测到隐藏并限制光标；游戏模式"

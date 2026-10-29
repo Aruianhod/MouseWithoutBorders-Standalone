@@ -61,7 +61,7 @@ namespace MouseWithoutBorders
             var gameTimer = new Timer(components) { Interval = 500 };
             gameTimer.Tick += (_, _) =>
             {
-                gameStatus.Text = GameMouseMode.Status + "\r\n" + GameMouseMode.RecentRemoteStatus;
+                gameStatus.Text = GameMouseMode.Status + "\r\n" + GameMouseMode.RecentRemoteStatus + "\r\n" + GameMouseMode.FullscreenStatus;
                 if (automaticGame.Checked != Setting.Values.AutomaticGameMouse) automaticGame.Checked = Setting.Values.AutomaticGameMouse;
             };
             gameTimer.Start();

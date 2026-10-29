@@ -1614,6 +1614,9 @@ internal static class Common
     /// Check if a machine switch triggered by EasyMouse would be allowed to proceed due to other settings.
     /// </summary>
     /// <returns>A boolean that tells us if the switch isn't blocked by any other settings</returns>
+    internal static bool IsForegroundFullscreenCrossingBlocked() =>
+        DisableEasyMouseWhenForegroundWindowIsFullscreenSetting() && IsEasyMouseBlockedByFullscreenWindow();
+
     internal static bool IsEasyMouseSwitchAllowed()
     {
         // Never prevent a switch if we are not moving out of the host machine.

@@ -1,3 +1,11 @@
+# Standalone 0.102.2933.22 — bidirectional fullscreen edge protection
+
+- Advertise foreground fullscreen crossing protection to authenticated peers separately from hidden-cursor/relative capture. The controller now blocks edge crossing while operating a protected fullscreen peer with absolute coordinates, including games that keep their cursor visible.
+- Fullscreen protection works independently of automatic relative game mode and does not force relative input or hide a visible game cursor. Alt+Tab / Win+D to a windowed application or desktop releases the foreground guard.
+- Keep fullscreen and capture state ordering independent. Reject unauthenticated/malformed frames and expire disconnected/stale peer protection; existing forced-switch shortcuts remain available.
+- Show fullscreen protection status on the game-mouse page. Enable the existing fullscreen crossing protection setting on both computers and update both to .22. Older peers ignore the additional state frame.
+- This release addresses fullscreen edge escape. The separate Zenless Zone Zero camera/cursor issue still requires receiver-side diagnostics and is not claimed fixed.
+
 # Standalone 0.102.2933.21 — background game crossing policy
 
 - Exclude desktop/taskbar/task-switch surfaces (including WorkerW), minimized, invisible and DWM-cloaked windows from automatic game capture. Recheck foreground identity after sampling to avoid attributing a stale clip to a new foreground window.
