@@ -52,16 +52,32 @@ namespace MouseWithoutBorders.Class
             input.type == 0 && (input.mi.dwFlags & (int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE))
                 == (int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE);
 
+        internal static bool UsePointerInjector(NativeMethods.INPUT input, bool available, bool suppressed) =>
+            available && !suppressed && IsAbsoluteMouseMove(input);
+
+        internal static bool FilterCapturedAbsoluteMove(ref NativeMethods.INPUT input, bool captured)
+        {
+            if (!captured || !IsAbsoluteMouseMove(input)) return true;
+            // Preserve button releases and wheel data if a combined event is ever
+            // queued with an absolute move; only the coordinate warp is discarded.
+            input.mi.dwFlags &= ~((int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE) | 0x4000 | 0x2000);
+            input.mi.dx = input.mi.dy = 0;
+            return input.mi.dwFlags != 0;
+        }
+
         private static uint SendInputEx(NativeMethods.INPUT input)
         {
-            // Recheck on the injection thread: a desktop move may have been queued
+            // Recheck at injection: a desktop move may have been waiting on the lock
             // before Alt+Tab returned focus and the game locked its cursor.
-            if (IsAbsoluteMouseMove(input) && GameMouseMode.RefreshLocalCapture().Captured)
+            if (IsAbsoluteMouseMove(input) && !FilterCapturedAbsoluteMove(ref input, GameMouseMode.RefreshLocalCapture().Captured))
             {
                 InputHook.RealData = true; // No injected hook event will consume the marker.
                 return 0;
             }
             Common.PaintCount = 0;
+            // Identify our native input by event, not by timing across two threads.
+            if (input.type == 0) input.mi.dwExtraInfo = InputHook.InjectedInputMarker;
+            else if (input.type == 1) input.ki.dwExtraInfo = InputHook.InjectedInputMarker;
 
             uint rv = 0;
             if (Common.Is64bitOS)
@@ -90,7 +106,7 @@ namespace MouseWithoutBorders.Class
                     input64.mi.dwExtraInfo = input.mi.dwExtraInfo;
                 }
 
-                if (input.type == 0 && (input.mi.dwFlags & (int)NativeMethods.MOUSEEVENTF.MOVE) != 0 && NativeMethods.InjectMouseInputAvailable && !GameMouseMode.SuppressSharedCursor)
+                if (UsePointerInjector(input, NativeMethods.InjectMouseInputAvailable, IsAbsoluteMouseMove(input) && GameMouseMode.SuppressSharedCursor))
                 {
                     Injector.InjectMouseInput(new[] { MouseInputToInjectedInputMouseInfo(input64.mi) });
                 }
@@ -102,7 +118,7 @@ namespace MouseWithoutBorders.Class
             }
             else
             {
-                if (input.type == 0 && (input.mi.dwFlags & (int)NativeMethods.MOUSEEVENTF.MOVE) != 0 && NativeMethods.InjectMouseInputAvailable && !GameMouseMode.SuppressSharedCursor)
+                if (UsePointerInjector(input, NativeMethods.InjectMouseInputAvailable, IsAbsoluteMouseMove(input) && GameMouseMode.SuppressSharedCursor))
                 {
                     Injector.InjectMouseInput(new[] { MouseInputToInjectedInputMouseInfo(input.mi) });
                 }
@@ -322,7 +338,6 @@ namespace MouseWithoutBorders.Class
                 input.mi.mouseData = 0;
                 input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.LEFTUP;
 
-                InputHook.SkipMouseUpCount++;
                 _ = SendInputEx(input);
                 Logger.LogDebug("MouseUp() called");
             });
@@ -339,27 +354,14 @@ namespace MouseWithoutBorders.Class
                 input.mi.dy = 0;
                 input.mi.mouseData = 0;
 
-                InputHook.SkipMouseUpDown = true;
-
-                try
-                {
-                    MoveMouse(x, y);
-
-                    InputHook.RealData = false;
-                    input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.LEFTDOWN;
-                    _ = SendInputEx(input);
-
-                    InputHook.RealData = false;
-                    input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.LEFTUP;
-                    _ = SendInputEx(input);
-
-                    Logger.LogDebug("MouseClick() called");
-                    Thread.Sleep(200);
-                }
-                finally
-                {
-                    InputHook.SkipMouseUpDown = false;
-                }
+                // SendInputEx marks these events individually. A timed suppression
+                // window would also swallow real clicks or the next physical release.
+                MoveMouse(x, y);
+                input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.LEFTDOWN;
+                _ = SendInputEx(input);
+                input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.LEFTUP;
+                _ = SendInputEx(input);
+                Logger.LogDebug("MouseClick() called");
             },
                 System.Threading.CancellationToken.None,
                 TaskCreationOptions.None,

@@ -44,23 +44,23 @@ namespace MouseWithoutBorders.Class
 
         // http://msdn.microsoft.com/en-us/library/ms644970(VS.85).aspx
         [StructLayout(LayoutKind.Sequential)]
-        private struct MouseLLHookStruct
+        internal struct MouseLLHookStruct
         {
             internal NativeMethods.POINT Pt;
             internal int MouseData;
             internal int Flags;
             internal int Time;
-            internal int DwExtraInfo;
+            internal IntPtr DwExtraInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct KeyboardHookStruct
+        internal struct KeyboardHookStruct
         {
             internal int VkCode;
             internal int ScanCode;
             internal int Flags;
             internal int Time;
-            internal int DwExtraInfo;
+            internal IntPtr DwExtraInfo;
         }
 
         internal event MouseEvHandler MouseEvent;
@@ -82,10 +82,13 @@ namespace MouseWithoutBorders.Class
         private static bool shiftDown;
 
         internal static bool RealData { get; set; } = true;
+        internal static readonly IntPtr InjectedInputMarker = new(0x4D574249);
 
-        internal static int SkipMouseUpCount { get; set; }
+        internal static bool IgnoreInjectedHookEvent(int flags, IntPtr extra, bool keyboard, bool legacySuppression) =>
+            (flags & (keyboard ? 0x10 : 0x01)) != 0 && (extra == InjectedInputMarker || legacySuppression);
 
-        internal static bool SkipMouseUpDown { get; set; }
+        internal static bool IgnoreRemoteGameWarp(int message, int flags, bool remoteCaptured) =>
+            remoteCaptured && message == WM.WM_MOUSEMOVE && (flags & 0x01) != 0;
 
         internal static bool CtrlDown { get; private set; }
 
@@ -204,13 +207,15 @@ namespace MouseWithoutBorders.Class
 
         private int MouseHookProc(int nCode, int wParam, IntPtr lParam)
         {
+            if (nCode < 0) return NativeMethods.CallNextHookEx(hMouseHook, nCode, wParam, lParam);
+            mouseHookStruct = LParamToMouseLLHookStruct(lParam);
             int rv = 1, dx = 0, dy = 0;
             bool local = false;
             Event.InputEventCount++;
 
             try
             {
-                if (!RealData)
+                if (IgnoreInjectedHookEvent(mouseHookStruct.Flags, mouseHookStruct.DwExtraInfo, false, !RealData))
                 {
                     RealData = true;
 
@@ -233,21 +238,10 @@ namespace MouseWithoutBorders.Class
 
                     if (nCode >= 0 && MouseEvent != null)
                     {
-                        if (wParam == WM.WM_LBUTTONUP && SkipMouseUpCount > 0)
-                        {
-                            Logger.LogDebug($"{nameof(SkipMouseUpCount)}: {SkipMouseUpCount}.");
-                            SkipMouseUpCount--;
-                            rv = NativeMethods.CallNextHookEx(hMouseHook, nCode, wParam, lParam);
-                            return rv;
-                        }
-
-                        if ((wParam == WM.WM_LBUTTONUP || wParam == WM.WM_LBUTTONDOWN) && SkipMouseUpDown)
-                        {
-                            rv = NativeMethods.CallNextHookEx(hMouseHook, nCode, wParam, lParam);
-                            return rv;
-                        }
-
                         mouseHookStruct = LParamToMouseLLHookStruct(lParam);
+                        if (IgnoreRemoteGameWarp(wParam, mouseHookStruct.Flags,
+                            !local && Setting.Values.AutomaticGameMouse && GameMouseMode.RemoteCaptured(Common.DesMachineID)))
+                            return NativeMethods.CallNextHookEx(hMouseHook, nCode, wParam, lParam);
                         hookCallbackMouseData.dwFlags = wParam;
 
                         // Use WheelDelta to store XBUTTON1/XBUTTON2 data.
@@ -344,8 +338,10 @@ namespace MouseWithoutBorders.Class
 
         private int KeyboardHookProc(int nCode, int wParam, IntPtr lParam)
         {
+            if (nCode < 0) return NativeMethods.CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+            keyboardHookStruct = LParamToKeyboardHookStruct(lParam);
             Event.InputEventCount++;
-            if (!RealData)
+            if (IgnoreInjectedHookEvent(keyboardHookStruct.Flags, keyboardHookStruct.DwExtraInfo, true, !RealData))
             {
                 return NativeMethods.CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
             }

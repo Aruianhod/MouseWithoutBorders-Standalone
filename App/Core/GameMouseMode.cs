@@ -15,6 +15,11 @@ internal sealed class GameCaptureTracker
     private bool candidate;
     internal bool Active { get; private set; }
 
+    internal void Reset()
+    {
+        foreground = IntPtr.Zero; since = 0; candidate = false; Active = false;
+    }
+
     internal bool Observe(IntPtr window, bool captured, long now)
     {
         if (window != foreground || !captured)
@@ -31,18 +36,22 @@ internal sealed class GameCaptureTracker
         return Active;
     }
 
-    internal static bool IsCaptured(bool hidden, Rectangle clip, Rectangle desktop, Rectangle client)
+    internal static bool IsCaptured(bool hidden, Rectangle clip, Rectangle desktop, Rectangle client) =>
+        IsCaptured(hidden, clip, desktop, client, desktop);
+
+    internal static bool IsCaptured(bool hidden, Rectangle clip, Rectangle desktop, Rectangle client, Rectangle monitor)
     {
-        if (!hidden || clip.Width < 0 || clip.Height < 0 || client.Width <= 0 || client.Height <= 0)
+        if (!hidden || desktop.Width <= 0 || desktop.Height <= 0 || clip.Width < 0 || clip.Height < 0 || client.Width <= 0 || client.Height <= 0)
             return false;
         // Unity games can lock to a single point (Left == Right, Top == Bottom).
         // GetClipCursor success is checked by the caller; zero area is a valid
         // constraint, not a failed query. Keep point/line locks inside this client.
         if (clip.Width == 0 || clip.Height == 0)
             return client.Contains(clip.Location) && clip.Right <= client.Right && clip.Bottom <= client.Bottom;
-        // A fullscreen clip equals the desktop on single-monitor PCs. Windows does not
-        // distinguish that from an unclipped cursor, so hidden fullscreen is a heuristic.
-        return client.Contains(clip) && (clip != desktop || client == desktop);
+        // Unclipped hidden fullscreen is a heuristic, on the window's monitor rather
+        // than only on a single-monitor desktop. A maximized/windowed app is excluded.
+        if (clip == desktop) return ForegroundMousePolicy.CoversMonitor(client, monitor);
+        return client.Contains(clip);
     }
 }
 
@@ -94,18 +103,23 @@ internal static class GameMouseMode
     internal const int FullscreenWireMagic = 0x474D0200;
     private static readonly object Gate = new();
     private static readonly object ProbeGate = new();
-    private static readonly Dictionary<ID, (TcpSk Connection, RemoteGameMouseState State)> Peers = new();
-    private static readonly Dictionary<ID, (TcpSk Connection, RemoteGameMouseState State)> FullscreenPeers = new();
+    private static readonly Dictionary<ID, (TcpSk Connection, TcpSk Alternate, RemoteGameMouseState State)> Peers = new();
+    private static readonly Dictionary<ID, (TcpSk Connection, TcpSk Alternate, RemoteGameMouseState State)> FullscreenPeers = new();
     private static readonly GameCaptureTracker Tracker = new();
     private static System.Windows.Forms.Timer timer;
     private static volatile bool localCaptured;
+    private static IntPtr capturedWindow;
     private static long lastSent;
     private static bool advertised;
     private static long lastFullscreenSent;
     private static bool advertisedFullscreen;
     private static volatile bool localFullscreenBlocked;
     private static string lastRemoteTransition = "尚未收到对面游戏状态（两端需 .19 或更新）";
-    internal static bool LocalCaptured => localCaptured;
+    internal static bool LocalCaptured => localCaptured && CaptureBelongsToForeground(
+        capturedWindow, NativeMethods.GetForegroundWindow(), Setting.Values.AutomaticGameMouse);
+
+    internal static bool CaptureBelongsToForeground(IntPtr captured, IntPtr current, bool enabled) =>
+        enabled && captured != IntPtr.Zero && captured == current;
 
     internal static bool IsIntentionallyHidden(bool succeeded, int flags, IntPtr cursor) =>
         succeeded && (flags == 0 || (flags == 1 && cursor == IntPtr.Zero));
@@ -117,7 +131,7 @@ internal static class GameMouseMode
             if (!Setting.Values.AutomaticGameMouse) return false;
             // A background game's hidden cursor must not hide the desktop fallback.
             if (!ForegroundMousePolicy.IsApplication(NativeMethods.GetForegroundWindow())) return false;
-            if (LocalCaptured) return true;
+            if (RefreshLocalCapture().Captured) return true;
             var info = new NativeMethods.CURSORINFO { cbSize = Marshal.SizeOf<NativeMethods.CURSORINFO>() };
             // Respect intentional hiding even before (or without) a clip rectangle.
             // CURSOR_SUPPRESSED (touch / no physical mouse) keeps the desktop fallback.
@@ -143,7 +157,9 @@ internal static class GameMouseMode
 
     internal static void Stop()
     {
-        timer?.Stop(); timer?.Dispose(); timer = null; localCaptured = false;
+        timer?.Stop(); timer?.Dispose(); timer = null;
+        lock (ProbeGate) { localCaptured = false; capturedWindow = IntPtr.Zero; Tracker.Reset(); }
+        advertised = false; advertisedFullscreen = false; lastSent = 0; lastFullscreenSent = 0;
         localFullscreenBlocked = false;
         lock (Gate) { Peers.Clear(); FullscreenPeers.Clear(); }
     }
@@ -164,9 +180,10 @@ internal static class GameMouseMode
                 && GetClipCursor(out var clip) && GetClientRect(window, out var client) && ClientToScreen(window, ref origin))
             {
                 var bounds = client.Bounds; bounds.Offset(origin);
-                candidate = GameCaptureTracker.IsCaptured(true, clip.Bounds, SystemInformation.VirtualScreen, bounds)
+                candidate = GameCaptureTracker.IsCaptured(true, clip.Bounds, SystemInformation.VirtualScreen, bounds, Screen.FromHandle(window).Bounds)
                     && window == NativeMethods.GetForegroundWindow();
             }
+            capturedWindow = candidate ? window : IntPtr.Zero;
             localCaptured = candidate;
             return (window, candidate);
         }
@@ -238,14 +255,22 @@ internal static class GameMouseMode
                     foreach (var item in states) if (item.Value.State.Seen < at) { oldest = item.Key; at = item.Value.State.Seen; }
                     states.Remove(oldest);
                 }
-                peer = (tcp, new());
+                peer = (tcp, null, new());
+            }
+            else if (!ReferenceEquals(peer.Connection, tcp))
+            {
+                // The same heartbeat can arrive on both authenticated directions.
+                // Remember the live carrier even when sequence deduplication rejects
+                // its duplicate; losing just one direction must not release capture.
+                peer = (tcp, peer.Connection, peer.State);
+                states[packet.Src] = peer;
             }
             // Both authenticated directions may carry the same state; retain ordering.
             bool wasActive = peer.State.LastReportedActive;
             bool next = (packet.Md.dwFlags & 1) != 0;
             if (peer.State.Update(next, unchecked((uint)packet.Md.WheelDelta), new(packet.Md.X, packet.Md.Y), Environment.TickCount64))
             {
-                states[packet.Src] = (tcp, peer.State);
+                states[packet.Src] = (tcp, peer.Alternate, peer.State);
                 if (!known || wasActive != next)
                 {
                     if (fullscreen)
@@ -263,18 +288,20 @@ internal static class GameMouseMode
     internal static bool RemoteCaptured(ID target)
     {
         lock (Gate) return Peers.TryGetValue(target, out var peer)
-            && peer.State.IsActive(Environment.TickCount64, peer.Connection.Status == SocketStatus.Connected);
+            && peer.State.IsActive(Environment.TickCount64, Connected(peer.Connection, peer.Alternate));
     }
 
     internal static bool UseRelative => Setting.Values.MoveMouseRelatively || (Setting.Values.AutomaticGameMouse && RemoteCaptured(Common.DesMachineID));
     internal static bool RemoteFullscreenBlocked(ID target)
     {
         lock (Gate) return FullscreenPeers.TryGetValue(target, out var peer)
-            && peer.State.IsActive(Environment.TickCount64, peer.Connection.Status == SocketStatus.Connected);
+            && peer.State.IsActive(Environment.TickCount64, Connected(peer.Connection, peer.Alternate));
     }
+    private static bool Connected(TcpSk connection, TcpSk alternate) =>
+        connection.Status == SocketStatus.Connected || alternate?.Status == SocketStatus.Connected;
     internal static bool BlockEdgeSwitch =>
         (Common.DesMachineID == Common.MachineID
-            ? Setting.Values.DisableEasyMouseWhenForegroundWindowIsFullscreen && localFullscreenBlocked
+            ? Common.IsForegroundFullscreenCrossingBlocked()
             : RemoteFullscreenBlocked(Common.DesMachineID))
         || (Setting.Values.AutomaticGameMouse && (Common.DesMachineID == Common.MachineID ? LocalCaptured : RemoteCaptured(Common.DesMachineID)));
 
@@ -292,6 +319,6 @@ internal static class GameMouseMode
     internal static Point? TakeRestore(ID target)
     {
         lock (Gate) return Peers.TryGetValue(target, out var peer)
-            ? peer.State.TakeRestore(Environment.TickCount64, Setting.Values.AutomaticGameMouse && peer.Connection.Status == SocketStatus.Connected) : null;
+            ? peer.State.TakeRestore(Environment.TickCount64, Setting.Values.AutomaticGameMouse && Connected(peer.Connection, peer.Alternate)) : null;
     }
 }

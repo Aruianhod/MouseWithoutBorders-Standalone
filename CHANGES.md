@@ -1,3 +1,11 @@
+# Standalone 0.102.2933.24 — game mouse boundary hardening
+
+- Invalidate cached capture when the foreground window changes; check local fullscreen protection at the crossing decision. Detect hidden fullscreen on its own monitor in multi-monitor desktops, with point/line/rectangle clip coverage including negative coordinates.
+- Keep relative movement on native SendInput regardless of menu cursor visibility. Filter absolute coordinate warps at injection while preserving combined button releases and wheel events.
+- Tag native mouse/keyboard injections and use pointer-sized hook metadata. Physical input is no longer discarded because another thread is injecting input; remove click suppression counters/time windows that could swallow a physical release.
+- Ignore software-generated source cursor warps while controlling a captured remote game. Keep both authenticated heartbeat carriers so closing one direction does not prematurely release game/fullscreen protection; stale/disconnected state still expires.
+- Validation: 257 tests passed, 1 pre-existing skip (258 total). Added boundary regression coverage; this is not a claim of universal game compatibility. See GAME-MOUSE-VALIDATION.txt for tested scope and manual checks. Both PCs started .24 successfully; authenticated input connections, settings synchronization and audio streams resumed, and logs showed captured/relative transitions. The user verified normal Zenless Zone Zero camera movement, menu clicks, Alt+Tab exit/return and desktop crossing on .24 (2026-10-30). Other games and hardware remain unverified.
+
 # Standalone 0.102.2933.23 — point-locked game cursor detection
 
 - Accept zero-area point/line cursor constraints inside the foreground application's client rectangle. Receiver-side diagnostics reproduced Zenless Zone Zero hiding the cursor and reporting a point clip; rejecting zero width/height prevented automatic relative mode from activating.
