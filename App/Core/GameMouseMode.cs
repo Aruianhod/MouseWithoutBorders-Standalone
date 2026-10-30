@@ -33,8 +33,13 @@ internal sealed class GameCaptureTracker
 
     internal static bool IsCaptured(bool hidden, Rectangle clip, Rectangle desktop, Rectangle client)
     {
-        if (!hidden || clip.Width <= 0 || clip.Height <= 0 || client.Width <= 0 || client.Height <= 0)
+        if (!hidden || clip.Width < 0 || clip.Height < 0 || client.Width <= 0 || client.Height <= 0)
             return false;
+        // Unity games can lock to a single point (Left == Right, Top == Bottom).
+        // GetClipCursor success is checked by the caller; zero area is a valid
+        // constraint, not a failed query. Keep point/line locks inside this client.
+        if (clip.Width == 0 || clip.Height == 0)
+            return client.Contains(clip.Location) && clip.Right <= client.Right && clip.Bottom <= client.Bottom;
         // A fullscreen clip equals the desktop on single-monitor PCs. Windows does not
         // distinguish that from an unclipped cursor, so hidden fullscreen is a heuristic.
         return client.Contains(clip) && (clip != desktop || client == desktop);

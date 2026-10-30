@@ -48,8 +48,19 @@ namespace MouseWithoutBorders.Class
             return injectedInput;
         }
 
+        internal static bool IsAbsoluteMouseMove(NativeMethods.INPUT input) =>
+            input.type == 0 && (input.mi.dwFlags & (int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE))
+                == (int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE);
+
         private static uint SendInputEx(NativeMethods.INPUT input)
         {
+            // Recheck on the injection thread: a desktop move may have been queued
+            // before Alt+Tab returned focus and the game locked its cursor.
+            if (IsAbsoluteMouseMove(input) && GameMouseMode.RefreshLocalCapture().Captured)
+            {
+                InputHook.RealData = true; // No injected hook event will consume the marker.
+                return 0;
+            }
             Common.PaintCount = 0;
 
             uint rv = 0;

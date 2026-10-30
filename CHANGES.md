@@ -1,3 +1,10 @@
+# Standalone 0.102.2933.23 — point-locked game cursor detection
+
+- Accept zero-area point/line cursor constraints inside the foreground application's client rectangle. Receiver-side diagnostics reproduced Zenless Zone Zero hiding the cursor and reporting a point clip; rejecting zero width/height prevented automatic relative mode from activating.
+- Recheck capture on the injection thread and discard queued absolute mouse moves after the game acquires capture, including centering moves. Relative input and button/key events remain unchanged.
+- Preserve foreground eligibility, immediate focus-loss release, capture debounce, peer leases and independent fullscreen protection.
+- Validation: 248 tests passed, 1 pre-existing skip; point-lock, outside-client, negative-monitor, focus-loss and input classification cases included. Both PCs deployed .23; receiver and controller logs confirmed captured/relative mode. The user verified normal Zenless Zone Zero camera movement and normal Alt+Tab return on 2026-10-30. This does not establish compatibility with all games.
+
 # Standalone 0.102.2933.22 — bidirectional fullscreen edge protection
 
 - Advertise foreground fullscreen crossing protection to authenticated peers separately from hidden-cursor/relative capture. The controller now blocks edge crossing while operating a protected fullscreen peer with absolute coordinates, including games that keep their cursor visible.

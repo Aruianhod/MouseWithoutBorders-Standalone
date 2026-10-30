@@ -84,6 +84,40 @@ public sealed class GameMouseModeTests
     }
 
     [TestMethod]
+    public void ZeroAreaGameLockIsCapturedAndFocusLossStillReleases()
+    {
+        // Captured on the secondary PC while reproducing the ZZZ Alt+Tab fault.
+        var desktop = new Rectangle(0, 0, 2560, 1600);
+        var pointLock = Rectangle.FromLTRB(1280, 800, 1280, 800);
+        Assert.IsTrue(GameCaptureTracker.IsCaptured(true, pointLock, desktop, desktop));
+        Assert.IsFalse(GameCaptureTracker.IsCaptured(false, pointLock, desktop, desktop));
+        Assert.IsFalse(GameCaptureTracker.IsCaptured(true, pointLock, desktop, new(0, 0, 800, 600)));
+        Assert.IsFalse(GameCaptureTracker.IsCaptured(true, new(2560, 800, 0, 0), desktop, desktop));
+        Assert.IsFalse(GameCaptureTracker.IsCaptured(true, new(1280, 800, -1, 0), desktop, desktop));
+        var negativeMonitor = new Rectangle(-2560, 0, 2560, 1600);
+        Assert.IsTrue(GameCaptureTracker.IsCaptured(true, new(-1280, 800, 0, 0), negativeMonitor, negativeMonitor));
+        var tracker = new GameCaptureTracker();
+        Assert.IsFalse(tracker.Observe((IntPtr)1, true, 0));
+        Assert.IsTrue(tracker.Observe((IntPtr)1, true, 100));
+        Assert.IsFalse(tracker.Observe((IntPtr)2, false, 101));
+    }
+
+    [TestMethod]
+    public void QueuedDesktopMoveGuardDistinguishesRelativeAndButtonInput()
+    {
+        var input = new NativeMethods.INPUT();
+        input.mi.dwFlags = (int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE);
+        Assert.IsTrue(InputSimulation.IsAbsoluteMouseMove(input));
+        input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.MOVE;
+        Assert.IsFalse(InputSimulation.IsAbsoluteMouseMove(input));
+        input.mi.dwFlags = (int)NativeMethods.MOUSEEVENTF.LEFTUP;
+        Assert.IsFalse(InputSimulation.IsAbsoluteMouseMove(input));
+        input.type = 1;
+        input.mi.dwFlags = (int)(NativeMethods.MOUSEEVENTF.MOVE | NativeMethods.MOUSEEVENTF.ABSOLUTE);
+        Assert.IsFalse(InputSimulation.IsAbsoluteMouseMove(input));
+    }
+
+    [TestMethod]
     public void FocusLossMenuAndShortHiddenTransitionsRestoreImmediately()
     {
         var tracker = new GameCaptureTracker();
